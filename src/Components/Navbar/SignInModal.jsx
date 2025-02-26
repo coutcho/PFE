@@ -1,0 +1,126 @@
+import { useState } from "react";
+import { FaGoogle, FaFacebook, FaTimes } from "react-icons/fa";
+
+function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState({});
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!email) newErrors.email = "Email is required";
+    if (!password) newErrors.password = "Password is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateForm()) {
+      console.log("Form submitted:", { email, password });
+      // Add your sign-in logic here
+    }
+  };
+
+  if (!show) return null;
+
+  return (
+    <>
+      <div className="modal show d-block" tabIndex="-1">
+        <div className="modal-dialog modal-dialog-centered">
+          <div className="modal-content">
+            <div className="modal-header border-0">
+              <h5 className="modal-title">Sign In</h5>
+              <button
+                type="button"
+                className="btn-close"
+                onClick={onClose}
+                aria-label="Close"
+              ></button>
+            </div>
+            <div className="modal-body px-4">
+              <form onSubmit={handleSubmit}>
+                <div className="mb-3">
+                  <input
+                    type="email"
+                    className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  {errors.email && (
+                    <div className="invalid-feedback">{errors.email}</div>
+                  )}
+                </div>
+                <div className="mb-3">
+                  <input
+                    type="password"
+                    className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  {errors.password && (
+                    <div className="invalid-feedback">{errors.password}</div>
+                  )}
+                </div>
+                <div className="mb-3 text-end">
+                  <a
+                    href="#"
+                    className="text-decoration-none"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose(); // Close the SignInModal
+                      onForgotPasswordClick(); // Open the ForgotPasswordModal
+                    }}
+                  >
+                    Forgot your password?
+                  </a>
+                </div>
+                <button type="submit" className="btn btn-primary w-100 mb-3">
+                  Sign In
+                </button>
+                <div className="text-center mb-3">
+                  <span className="text-muted">or sign in with</span>
+                </div>
+                <div className="d-flex gap-2 mb-3">
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary flex-grow-1"
+                  >
+                    <FaGoogle className="me-2" />
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline-secondary flex-grow-1"
+                  >
+                    <FaFacebook className="me-2" />
+                    Facebook
+                  </button>
+                </div>
+                <div className="text-center">
+                  <span className="text-muted">Don't have an account? </span>
+                  <a
+                    href="#"
+                    className="text-primary text-decoration-none"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onClose(); // Close the SignInModal
+                      onSignUpClick(); // Open the SignUpModal
+                    }}
+                  >
+                    Create one
+                  </a>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="modal-backdrop show"></div>
+    </>
+  );
+}
+
+export default SignInModal;

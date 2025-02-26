@@ -1,0 +1,16 @@
+.min-h-screen {
+    background-image: url("/background.jpg"); /* Image path from public folder */
+    background-size: cover;
+    width: 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+    min-height: 65vh; /* Full viewport height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centers content vertically */
+    align-items: center;     /* Centers content horizontally */
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); /* Improves text readability */
+}
+
+

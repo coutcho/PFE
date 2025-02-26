@@ -1,0 +1,77 @@
+/* Import Bootstrap CSS */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+/* Custom styles */
+.property-gallery {
+  height: 500px;
+  position: relative;
+}
+
+.property-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-nav-button {
+  background: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 50%;
+  padding: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.gallery-nav-button:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.gallery-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0;
+}
+
+.gallery-dot.active {
+  background: rgba(255, 255, 255, 1);
+}
+
+.feature-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #0d6efd;
+  margin-right: 8px;
+}
+.agent{
+    position: sticky !important;
+    top: 80px; /* Stick it to the top of the viewport */
+   
+}
+/* Set max height for modal and make it responsive */
+.modal-content {
+  max-height: 80vh; /* 80% of the viewport height */
+  overflow-y: auto; /* Scroll if content overflows */
+  border-radius: 1rem; /* Rounded corners for aesthetics */
+}
+
+/* Adjust height for smaller screens */
+@media (max-width: 768px) {
+  .modal-content {
+    max-height: 70vh; /* Reduce height for mobile view */
+  }
+}
+.scrollable-content {
+  overflow-y: auto;
+  max-height: 80vh; /* Adjust this value as needed */
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: white; /* Ensures content doesn’t show through */
+  border-bottom: 1px solid #dee2e6; /* Optional: adds visual separation */
+}
