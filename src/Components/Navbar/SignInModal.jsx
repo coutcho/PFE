@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { FaGoogle, FaFacebook, FaTimes } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { FaGoogle, FaFacebook } from "react-icons/fa";
+import { jwtDecode } from "jwt-decode"; // Updated import
 
-function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
+function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSignInSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate();
 
   const validateForm = () => {
     const newErrors = {};
@@ -32,22 +35,38 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
 
         if (response.ok) {
           setSuccessMessage(data.message || "Sign-in successful! Welcome back!");
-          setEmail("");
-          setPassword("");
-          setErrors({});
-          setServerError("");
-          // Close modal after 2 seconds
-          setTimeout(() => {
-            onClose();
-            setSuccessMessage("");
-            // Optionally: Trigger a global login state update here
-          }, 2000);
+          if (data.token) {
+            // Store the token and decode it to get the user's role
+            localStorage.setItem("authToken", data.token);
+            const decodedToken = jwtDecode(data.token);
+            const userRole = decodedToken.role;
+
+            // Reset form fields and errors
+            setEmail("");
+            setPassword("");
+            setErrors({});
+            setServerError("");
+
+            // Redirect based on user role after a 2-second delay
+            setTimeout(() => {
+              if (userRole === "admin") {
+                navigate("/admin"); // Admin redirects to /admin
+              } else {
+                onSignInSuccess(); // Regular user sign-in success
+                navigate("/"); // Regular user redirects to home
+              }
+              onClose(); // Close the modal
+              setSuccessMessage(""); // Clear success message
+            }, 2000);
+          } else {
+            throw new Error("No token received");
+          }
         } else {
           setServerError(data.message || "An error occurred during sign-in.");
         }
       } catch (error) {
         console.error("Error during sign-in:", error);
-        setServerError("Network error. Please try again.");
+        setServerError("Network error or invalid response. Please try again.");
       }
     }
   };

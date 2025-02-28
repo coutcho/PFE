@@ -1,6 +1,7 @@
-import { useState } from 'react'; // Add useState for sign-in trigger
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Navbar from './Components/Navbar/navbar';
+import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { jwtDecode } from "jwt-decode";
+import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -9,14 +10,31 @@ import PropertyListings from './Components/Body/PropertyListings';
 import Footer from './Components/Footer/Footer';
 import ListingPage from './Components/ListingPage/ListingPage';
 import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
+import AdminPage from "./Components/Admin/AdminPage";
 
+// PrivateRoute component to protect admin routes
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem("authToken");
+  if (!token) return <Navigate to="/" replace />;
+  try {
+    const { role } = jwtDecode(token);
+    return role === "admin" ? children : <Navigate to="/" replace />;
+  } catch (error) {
+    console.error("Error decoding token:", error);
+    localStorage.removeItem("authToken");
+    return <Navigate to="/" replace />;
+  }
+}
+
+// Main App component
 export default function App() {
-  const [openSignIn, setOpenSignIn] = useState(null); // To trigger SignInModal from Navbar
+  const [openSignIn, setOpenSignIn] = useState(null);
 
   return (
     <Router>
-      <Navbar onSignInTrigger={(fn) => setOpenSignIn(() => fn)} /> {/* Pass callback */}
+      <Navbar onSignInTrigger={(fn) => setOpenSignIn(() => fn)} />
       <Routes>
+        {/* Home Route */}
         <Route
           path="/"
           element={
@@ -34,19 +52,32 @@ export default function App() {
             </>
           }
         />
+        {/* Listing Page Route */}
         <Route path="/listing/:id" element={<ListingPage />} />
+        {/* Admin Route with Nested Sub-Routes */}
+        <Route
+          path="/admin/*"
+          element={
+            <PrivateRoute>
+              <AdminPage />
+            </PrivateRoute>
+          }
+        />
+        {/* Reset Password Route */}
         <Route
           path="/reset-password"
           element={
             <ResetPasswordModal
               show={true}
-              onClose={() => window.history.pushState({}, "", "/")} // Still works, but navigate is better
+              onClose={() => window.history.pushState({}, "", "/")}
               onSignInClick={() => {
-                if (openSignIn) openSignIn(); // Trigger SignInModal
+                if (openSignIn) openSignIn();
               }}
             />
           }
         />
+        {/* Catch-All Route for Undefined Paths */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );

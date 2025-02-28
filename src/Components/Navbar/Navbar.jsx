@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom"; // ✅ Import Link
+import { Link, useNavigate } from "react-router-dom";
 import "./Navbar.css";
 import SignInModal from "./SignInModal";
 import SignUpModal from "./SignUpModal";
@@ -10,8 +10,9 @@ export default function Navbar() {
   const [showSignInModal, setShowSignInModal] = useState(false);
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(!!localStorage.getItem("authToken"));
+  const navigate = useNavigate();
 
-  // Detect scroll and update state
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -26,6 +27,34 @@ export default function Navbar() {
     setShowForgotPasswordModal(false);
   };
 
+  const handleSignInSuccess = () => {
+    setIsSignedIn(true);
+    closeModal();
+  };
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        await fetch("http://localhost:3001/api/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      }
+      localStorage.removeItem("authToken");
+      setIsSignedIn(false);
+      navigate("/");
+    } catch (error) {
+      console.error("Error during logout:", error);
+      localStorage.removeItem("authToken");
+      setIsSignedIn(false);
+      navigate("/");
+    }
+  };
+
   return (
     <nav
       className={`navbar navbar-expand-lg bg-body-tertiary rounded ${
@@ -34,11 +63,9 @@ export default function Navbar() {
       aria-label="Eleventh navbar example"
     >
       <div className="container-fluid">
-        {/* 🔗 Updated to Link for navigation to home page */}
         <Link className="navbar-brand" to="/">
           Darek
         </Link>
-
         <button
           className="navbar-toggler"
           type="button"
@@ -50,10 +77,8 @@ export default function Navbar() {
         >
           <span className="navbar-toggler-icon"></span>
         </button>
-
         <div className="collapse navbar-collapse" id="navbarsExample09">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            {/* 🔗 Updated Home button to Link */}
             <li className="nav-item">
               <Link className="nav-link active" aria-current="page" to="/">
                 Home
@@ -79,44 +104,53 @@ export default function Navbar() {
                 Louer
               </a>
               <ul className="dropdown-menu">
-                <li>
-                  <a className="dropdown-item" href="#">
-                    Maison
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" href="#">
-                    Villa
-                  </a>
-                </li>
-                <li>
-                  <a className="dropdown-item" href="#">
-                    Something else here
-                  </a>
-                </li>
+                <li><a className="dropdown-item" href="#">Maison</a></li>
+                <li><a className="dropdown-item" href="#">Villa</a></li>
+                <li><a className="dropdown-item" href="#">Something else here</a></li>
               </ul>
             </li>
           </ul>
-
-          {/* Buttons aligned to the right */}
           <div className="d-flex align-items-center gap-2">
-            <button
-              className="btn btn-primary"
-              onClick={() => setShowSignInModal(true)}
-            >
-              Sign In
-            </button>
-            <button
-              className="btn btn-primary signup"
-              onClick={() => setShowSignUpModal(true)}
-            >
-              Sign Up
-            </button>
+            {isSignedIn ? (
+              <div className="dropdown">
+                <button
+                  className="btn btn-primary dropdown-toggle"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                >
+                  Account
+                </button>
+                <ul className="dropdown-menu dropdown-menu-end">
+                  <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
+                  <li><Link className="dropdown-item" to="/favorites">Favorite Listings</Link></li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li>
+                    <button className="dropdown-item text-danger" onClick={handleLogout}>
+                      Logout
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            ) : (
+              <>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowSignInModal(true)}
+                >
+                  Sign In
+                </button>
+                <button
+                  className="btn btn-primary signup"
+                  onClick={() => setShowSignUpModal(true)}
+                >
+                  Sign Up
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Sign In Modal */}
       {showSignInModal && (
         <SignInModal
           show={showSignInModal}
@@ -129,10 +163,9 @@ export default function Navbar() {
             closeModal();
             setShowForgotPasswordModal(true);
           }}
+          onSignInSuccess={handleSignInSuccess}
         />
       )}
-
-      {/* Sign Up Modal */}
       {showSignUpModal && (
         <SignUpModal
           show={showSignUpModal}
@@ -143,8 +176,6 @@ export default function Navbar() {
           }}
         />
       )}
-
-      {/* Forgot Password Modal */}
       {showForgotPasswordModal && (
         <ForgotPasswordModal
           show={showForgotPasswordModal}

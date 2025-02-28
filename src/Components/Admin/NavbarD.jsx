@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaSignOutAlt } from 'react-icons/fa';
 
-function Navbar() {
+function NavbarD() {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
       <div className="container-fluid">
@@ -42,4 +42,4 @@ function Navbar() {
   );
 }
 
-export default Navbar;
+export default NavbarD;

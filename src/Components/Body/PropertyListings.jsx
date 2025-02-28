@@ -14,7 +14,7 @@ const properties = [
     beds: 4,
     baths: 3,
     sqft: 2500,
-    address: '123 Main St, Anytown, USA'
+    address: '123 Main St, Anytown, USA',
   },
   {
     id: 2,
@@ -24,7 +24,7 @@ const properties = [
     beds: 5,
     baths: 4,
     sqft: 3200,
-    address: '456 Oak Ave, Somewhere, USA'
+    address: '456 Oak Ave, Somewhere, USA',
   },
   {
     id: 3,
@@ -34,7 +34,7 @@ const properties = [
     beds: 3,
     baths: 2,
     sqft: 1800,
-    address: '789 Pine Rd, Elsewhere, USA'
+    address: '789 Pine Rd, Elsewhere, USA',
   },
   {
     id: 4,
@@ -44,8 +44,8 @@ const properties = [
     beds: 4,
     baths: 3.5,
     sqft: 2800,
-    address: '321 Maple Dr, Nowhere, USA'
-  }
+    address: '321 Maple Dr, Nowhere, USA',
+  },
 ];
 
 const PropertyListings = () => {

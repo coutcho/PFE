@@ -1,11 +1,14 @@
-
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler } from 'react-icons/fa';
 
-
 const PropertyCard = ({ property }) => {
   const [isFavorite, setIsFavorite] = useState(false);
+
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation(); // Prevents the click event from bubbling up
+    setIsFavorite(!isFavorite); // Toggles the favorite state
+  };
 
   return (
     <motion.div
@@ -17,13 +20,18 @@ const PropertyCard = ({ property }) => {
       transition={{ duration: 0.3 }}
     >
       <div className="position-relative">
-        <img src={property.image} className="card-img-top" alt={property.address} style={{ height: '200px', objectFit: 'cover' }} />
+        <img
+          src={property.image}
+          className="card-img-top"
+          alt={property.address}
+          style={{ height: '200px', objectFit: 'cover' }}
+        />
         <span className="position-absolute top-0 start-0 m-2 badge bg-primary">
           {property.status}
         </span>
         <button
           className="position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2"
-          onClick={() => setIsFavorite(!isFavorite)}
+          onClick={handleFavoriteClick} // Updated to use the new handler
         >
           {isFavorite ? <FaHeart color="red" /> : <FaRegHeart />}
         </button>
@@ -31,9 +39,15 @@ const PropertyCard = ({ property }) => {
       <div className="card-body">
         <h5 className="card-title fw-bold">${property.price.toLocaleString()}</h5>
         <div className="d-flex gap-3 mb-2">
-          <span><FaBed className="me-1" /> {property.beds} beds</span>
-          <span><FaBath className="me-1" /> {property.baths} baths</span>
-          <span><FaRuler className="me-1" /> {property.sqft.toLocaleString()} sqft</span>
+          <span>
+            <FaBed className="me-1" /> {property.beds} beds
+          </span>
+          <span>
+            <FaBath className="me-1" /> {property.baths} baths
+          </span>
+          <span>
+            <FaRuler className="me-1" /> {property.sqft.toLocaleString()} sqft
+          </span>
         </div>
         <p className="card-text text-muted">{property.address}</p>
       </div>
