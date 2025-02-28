@@ -1,3 +1,4 @@
+import { useState } from 'react'; // Add useState for sign-in trigger
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './Components/Navbar/navbar';
 import SearchBar from './Components/Navbar/Searchbar';
@@ -6,12 +7,15 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import PropertyListings from './Components/Body/PropertyListings';
 import Footer from './Components/Footer/Footer';
-import ListingPage from './Components/ListingPage/ListingPage'; // Import ListingPage
+import ListingPage from './Components/ListingPage/ListingPage';
+import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
 
 export default function App() {
+  const [openSignIn, setOpenSignIn] = useState(null); // To trigger SignInModal from Navbar
+
   return (
     <Router>
-      <Navbar />
+      <Navbar onSignInTrigger={(fn) => setOpenSignIn(() => fn)} /> {/* Pass callback */}
       <Routes>
         <Route
           path="/"
@@ -31,6 +35,18 @@ export default function App() {
           }
         />
         <Route path="/listing/:id" element={<ListingPage />} />
+        <Route
+          path="/reset-password"
+          element={
+            <ResetPasswordModal
+              show={true}
+              onClose={() => window.history.pushState({}, "", "/")} // Still works, but navigate is better
+              onSignInClick={() => {
+                if (openSignIn) openSignIn(); // Trigger SignInModal
+              }}
+            />
+          }
+        />
       </Routes>
     </Router>
   );

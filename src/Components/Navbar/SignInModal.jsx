@@ -5,6 +5,8 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState({});
+  const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const validateForm = () => {
     const newErrors = {};
@@ -14,11 +16,39 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      console.log("Form submitted:", { email, password });
-      // Add your sign-in logic here
+      try {
+        const response = await fetch("http://localhost:3001/api/signin", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, pass: password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setSuccessMessage(data.message || "Sign-in successful! Welcome back!");
+          setEmail("");
+          setPassword("");
+          setErrors({});
+          setServerError("");
+          // Close modal after 2 seconds
+          setTimeout(() => {
+            onClose();
+            setSuccessMessage("");
+            // Optionally: Trigger a global login state update here
+          }, 2000);
+        } else {
+          setServerError(data.message || "An error occurred during sign-in.");
+        }
+      } catch (error) {
+        console.error("Error during sign-in:", error);
+        setServerError("Network error. Please try again.");
+      }
     }
   };
 
@@ -39,81 +69,90 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick }) {
               ></button>
             </div>
             <div className="modal-body px-4">
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <input
-                    type="email"
-                    className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  {errors.email && (
-                    <div className="invalid-feedback">{errors.email}</div>
+              {successMessage ? (
+                <div className="text-center py-4">
+                  <div className="alert alert-success">{successMessage}</div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit}>
+                  {serverError && (
+                    <div className="alert alert-danger">{serverError}</div>
                   )}
-                </div>
-                <div className="mb-3">
-                  <input
-                    type="password"
-                    className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  {errors.password && (
-                    <div className="invalid-feedback">{errors.password}</div>
-                  )}
-                </div>
-                <div className="mb-3 text-end">
-                  <a
-                    href="#"
-                    className="text-decoration-none"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onClose(); // Close the SignInModal
-                      onForgotPasswordClick(); // Open the ForgotPasswordModal
-                    }}
-                  >
-                    Forgot your password?
-                  </a>
-                </div>
-                <button type="submit" className="btn btn-primary w-100 mb-3">
-                  Sign In
-                </button>
-                <div className="text-center mb-3">
-                  <span className="text-muted">or sign in with</span>
-                </div>
-                <div className="d-flex gap-2 mb-3">
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary flex-grow-1"
-                  >
-                    <FaGoogle className="me-2" />
-                    Google
+                  <div className="mb-3">
+                    <input
+                      type="email"
+                      className={`form-control ${errors.email ? "is-invalid" : ""}`}
+                      placeholder="Email address"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                    {errors.email && (
+                      <div className="invalid-feedback">{errors.email}</div>
+                    )}
+                  </div>
+                  <div className="mb-3">
+                    <input
+                      type="password"
+                      className={`form-control ${errors.password ? "is-invalid" : ""}`}
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    {errors.password && (
+                      <div className="invalid-feedback">{errors.password}</div>
+                    )}
+                  </div>
+                  <div className="mb-3 text-end">
+                    <a
+                      href="#"
+                      className="text-decoration-none"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onClose();
+                        onForgotPasswordClick();
+                      }}
+                    >
+                      Forgot your password?
+                    </a>
+                  </div>
+                  <button type="submit" className="btn btn-primary w-100 mb-3">
+                    Sign In
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-outline-secondary flex-grow-1"
-                  >
-                    <FaFacebook className="me-2" />
-                    Facebook
-                  </button>
-                </div>
-                <div className="text-center">
-                  <span className="text-muted">Don't have an account? </span>
-                  <a
-                    href="#"
-                    className="text-primary text-decoration-none"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onClose(); // Close the SignInModal
-                      onSignUpClick(); // Open the SignUpModal
-                    }}
-                  >
-                    Create one
-                  </a>
-                </div>
-              </form>
+                  <div className="text-center mb-3">
+                    <span className="text-muted">or sign in with</span>
+                  </div>
+                  <div className="d-flex gap-2 mb-3">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary flex-grow-1"
+                    >
+                      <FaGoogle className="me-2" />
+                      Google
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary flex-grow-1"
+                    >
+                      <FaFacebook className="me-2" />
+                      Facebook
+                    </button>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-muted">Don't have an account? </span>
+                    <a
+                      href="#"
+                      className="text-primary text-decoration-none"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onClose();
+                        onSignUpClick();
+                      }}
+                    >
+                      Create one
+                    </a>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

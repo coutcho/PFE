@@ -10,9 +10,10 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
       .toLowerCase()
       .match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (!email) {
       setError("Email is required");
       return;
@@ -21,8 +22,27 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
       setError("Please enter a valid email address");
       return;
     }
-    console.log("Password reset requested for:", email);
-    setIsSubmitted(true);
+
+    try {
+      const response = await fetch("http://localhost:3001/api/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsSubmitted(true); // Show success UI
+      } else {
+        setError(data.message || "An error occurred. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error requesting password reset:", error);
+      setError("Network error. Please check your connection and try again.");
+    }
   };
 
   if (!show) return null;
@@ -69,7 +89,7 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
                       className="text-primary text-decoration-none"
                       onClick={(e) => {
                         e.preventDefault();
-                        onBackToSignIn(); // Go back to Sign In modal
+                        onBackToSignIn();
                       }}
                     >
                       Back to Sign In
@@ -96,7 +116,7 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
                   </p>
                   <button
                     className="btn btn-primary"
-                    onClick={onBackToSignIn} // Go back to Sign In modal
+                    onClick={onBackToSignIn}
                   >
                     Back to Sign In
                   </button>
