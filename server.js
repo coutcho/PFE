@@ -5,12 +5,25 @@ import bcrypt from "bcryptjs";
 import { createHash } from "crypto";
 import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
+import passport from "passport";
+import session from "express-session";
+import FacebookStrategy from "passport-facebook";
+import GoogleStrategy from "passport-google-oauth20";
 
 const app = express();
 const port = 3001;
 
 app.use(cors());
 app.use(express.json());
+app.use(
+  session({
+    secret: "your-session-secret", // Replace with a strong secret
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 const { Pool } = pkg;
 const pool = new Pool({
@@ -29,6 +42,78 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+// Passport serialization
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+    done(null, user.rows[0]);
+  } catch (err) {
+    done(err);
+  }
+});
+
+// Facebook Strategy
+passport.use(
+  new FacebookStrategy(
+    {
+      clientID: "1376129730264892", // Replace with your Facebook App ID
+      clientSecret: "110e3a97476f4b94f317276a86388508", // Replace with your Facebook App Secret
+      callbackURL: "http://localhost:3001/auth/facebook/callback",
+      profileFields: ["id", "displayName", "emails"],
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails[0].value;
+        let user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+
+        if (user.rows.length === 0) {
+          // Create new user if not exists
+          user = await pool.query(
+            "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
+            [profile.displayName, email, "user"]
+          );
+        }
+        done(null, user.rows[0]);
+      } catch (err) {
+        done(err);
+      }
+    }
+  )
+);
+
+// Google Strategy
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: "162828373124-04ct27vn8oh29kll5gfb7jcnqe082o7f.apps.googleusercontent.com", // Replace with your Google Client ID
+      clientSecret: "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", // Replace with your Google Client Secret
+      callbackURL: "http://localhost:3001/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails[0].value;
+        let user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+
+        if (user.rows.length === 0) {
+          // Create new user if not exists
+          user = await pool.query(
+            "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
+            [profile.displayName, email, "user"]
+          );
+        }
+        done(null, user.rows[0]);
+      } catch (err) {
+        done(err);
+      }
+    }
+  )
+);
+
+// Existing password check function
 const checkPasswordWithHIBP = async (password) => {
   try {
     const hash = createHash("sha1").update(password).digest("hex").toUpperCase();
@@ -54,7 +139,7 @@ const checkPasswordWithHIBP = async (password) => {
   }
 };
 
-// Sign-up endpoint
+// Existing Sign-up endpoint
 app.post("/api/signup", async (req, res) => {
   const { nom, prenom, email, pass } = req.body;
 
@@ -101,7 +186,7 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-// Sign-in endpoint (updated to include role in JWT)
+// Existing Sign-in endpoint
 app.post("/api/signin", async (req, res) => {
   const { email, pass } = req.body;
 
@@ -110,7 +195,6 @@ app.post("/api/signin", async (req, res) => {
   }
 
   try {
-    // Fetch user including the role column
     const userQuery = await pool.query(
       "SELECT id, fullname, email, pass, role FROM users WHERE email = $1",
       [email]
@@ -126,13 +210,10 @@ app.post("/api/signin", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Use the role from the database, default to "user" if not set
-    const role = user.role || "admin";
-
-    // Generate JWT token with role
+    const role = user.role || "user";
     const token = jwt.sign(
       { id: user.id, email: user.email, role },
-      "your-secret-key", // Replace with a strong secret key
+      "your-secret-key",
       { expiresIn: "1h" }
     );
 
@@ -153,7 +234,44 @@ app.post("/api/signin", async (req, res) => {
   }
 });
 
-// Forgot Password endpoint
+// Facebook Login Routes
+app.get("/auth/facebook", passport.authenticate("facebook", { scope: ["email"] }));
+
+app.get(
+  "/auth/facebook/callback",
+  passport.authenticate("facebook", { session: false }),
+  (req, res) => {
+    const user = req.user;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role || "user" },
+      "your-secret-key",
+      { expiresIn: "1h" }
+    );
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+  }
+);
+
+// Google Login Routes
+app.get(
+  "/auth/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    const user = req.user;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role || "user" },
+      "your-secret-key",
+      { expiresIn: "1h" }
+    );
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
+  }
+);
+
+// Existing Forgot Password endpoint
 app.post("/api/forgot-password", async (req, res) => {
   const { email } = req.body;
 
@@ -193,7 +311,7 @@ app.post("/api/forgot-password", async (req, res) => {
   }
 });
 
-// Reset Password endpoint
+// Existing Reset Password endpoint
 app.post("/api/reset-password", async (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -215,7 +333,10 @@ app.post("/api/reset-password", async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await pool.query("UPDATE users SET pass = $1 WHERE id = $2", [hashedPassword, resetToken.user_id]);
+    await pool.query("UPDATE users SET pass = $1 WHERE id = $2", [
+      hashedPassword,
+      resetToken.user_id,
+    ]);
 
     await pool.query("DELETE FROM reset_tokens WHERE token = $1", [token]);
 

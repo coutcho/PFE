@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaGoogle, FaFacebook } from "react-icons/fa";
-import { jwtDecode } from "jwt-decode"; // Updated import
+import { jwtDecode } from "jwt-decode";
 
 function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSignInSuccess }) {
   const [email, setEmail] = useState("");
@@ -36,27 +36,24 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
         if (response.ok) {
           setSuccessMessage(data.message || "Sign-in successful! Welcome back!");
           if (data.token) {
-            // Store the token and decode it to get the user's role
             localStorage.setItem("authToken", data.token);
             const decodedToken = jwtDecode(data.token);
             const userRole = decodedToken.role;
 
-            // Reset form fields and errors
             setEmail("");
             setPassword("");
             setErrors({});
             setServerError("");
 
-            // Redirect based on user role after a 2-second delay
             setTimeout(() => {
               if (userRole === "admin") {
-                navigate("/admin"); // Admin redirects to /admin
+                navigate("/admin");
               } else {
-                onSignInSuccess(); // Regular user sign-in success
-                navigate("/"); // Regular user redirects to home
+                onSignInSuccess();
+                navigate("/");
               }
-              onClose(); // Close the modal
-              setSuccessMessage(""); // Clear success message
+              onClose();
+              setSuccessMessage("");
             }, 2000);
           } else {
             throw new Error("No token received");
@@ -69,6 +66,10 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
         setServerError("Network error or invalid response. Please try again.");
       }
     }
+  };
+
+  const handleSocialLogin = (provider) => {
+    window.location.href = `http://localhost:3001/auth/${provider}`;
   };
 
   if (!show) return null;
@@ -144,6 +145,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                     <button
                       type="button"
                       className="btn btn-outline-secondary flex-grow-1"
+                      onClick={() => handleSocialLogin("google")}
                     >
                       <FaGoogle className="me-2" />
                       Google
@@ -151,6 +153,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                     <button
                       type="button"
                       className="btn btn-outline-secondary flex-grow-1"
+                      onClick={() => handleSocialLogin("facebook")}
                     >
                       <FaFacebook className="me-2" />
                       Facebook

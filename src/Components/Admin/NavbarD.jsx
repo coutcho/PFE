@@ -1,7 +1,34 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
 import { FaSignOutAlt } from 'react-icons/fa';
 
 function NavbarD() {
+  const navigate = useNavigate(); // Hook to programmatically navigate
+
+  const handleLogout = async () => {
+    try {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        // Optional: Make an API call to logout endpoint
+        await fetch("http://localhost:3001/api/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      }
+      // Clear the token from localStorage
+      localStorage.removeItem("authToken");
+      // Redirect to the homepage or login page
+      navigate("/");
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // Even if the API call fails, clear the token and redirect
+      localStorage.removeItem("authToken");
+      navigate("/");
+    }
+  };
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
       <div className="container-fluid">
@@ -32,7 +59,7 @@ function NavbarD() {
               <Link className="nav-link" to="/settings">Settings</Link>
             </li>
           </ul>
-          <button className="btn btn-outline-light">
+          <button className="btn btn-outline-light" onClick={handleLogout}>
             <FaSignOutAlt className="me-2" />
             Logout
           </button>

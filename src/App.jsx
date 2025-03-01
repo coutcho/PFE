@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from "jwt-decode";
 import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
+import AuthCallback from './Components/Navbar/AuthCallback'; // Import the new component
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -26,19 +27,31 @@ function PrivateRoute({ children }) {
   }
 }
 
+// Wrapper component to handle conditional Navbar rendering
+function Layout({ children, onSignInTrigger }) {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  return (
+    <>
+      {!isAdminRoute && <Navbar onSignInTrigger={onSignInTrigger} />}
+      {children}
+    </>
+  );
+}
+
 // Main App component
 export default function App() {
   const [openSignIn, setOpenSignIn] = useState(null);
 
   return (
     <Router>
-      <Navbar onSignInTrigger={(fn) => setOpenSignIn(() => fn)} />
       <Routes>
         {/* Home Route */}
         <Route
           path="/"
           element={
-            <>
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
               <div className="min-h-screen flex flex-col justify-center items-center text-center">
                 <main className="w-full max-w-7xl p-4">
                   <h1 className="text-4xl font-bold mb-6">Rechercher où habiter!</h1>
@@ -49,11 +62,18 @@ export default function App() {
                 <PropertyListings />
               </div>
               <Footer />
-            </>
+            </Layout>
           }
         />
         {/* Listing Page Route */}
-        <Route path="/listing/:id" element={<ListingPage />} />
+        <Route
+          path="/listing/:id"
+          element={
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <ListingPage />
+            </Layout>
+          }
+        />
         {/* Admin Route with Nested Sub-Routes */}
         <Route
           path="/admin/*"
@@ -67,17 +87,31 @@ export default function App() {
         <Route
           path="/reset-password"
           element={
-            <ResetPasswordModal
-              show={true}
-              onClose={() => window.history.pushState({}, "", "/")}
-              onSignInClick={() => {
-                if (openSignIn) openSignIn();
-              }}
-            />
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <ResetPasswordModal
+                show={true}
+                onClose={() => window.history.pushState({}, "", "/")}
+                onSignInClick={() => {
+                  if (openSignIn) openSignIn();
+                }}
+              />
+            </Layout>
           }
         />
+        {/* Auth Callback Route */}
+        <Route
+          path="/auth/callback"
+          element={<AuthCallback />}
+        />
         {/* Catch-All Route for Undefined Paths */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route
+          path="*"
+          element={
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <Navigate to="/" replace />
+            </Layout>
+          }
+        />
       </Routes>
     </Router>
   );
