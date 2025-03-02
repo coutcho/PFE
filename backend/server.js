@@ -9,6 +9,8 @@ import passport from "passport";
 import session from "express-session";
 import FacebookStrategy from "passport-facebook";
 import GoogleStrategy from "passport-google-oauth20";
+import propertiesRoutes from './propertiesRoutes.js'; // Import the new routes
+import usersRoutes from './usersRoutes.js';
 
 const app = express();
 const port = 3001;
@@ -60,8 +62,8 @@ passport.deserializeUser(async (id, done) => {
 passport.use(
   new FacebookStrategy(
     {
-      clientID: "1376129730264892", // Replace with your Facebook App ID
-      clientSecret: "110e3a97476f4b94f317276a86388508", // Replace with your Facebook App Secret
+      clientID: "1376129730264892",
+      clientSecret: "110e3a97476f4b94f317276a86388508",
       callbackURL: "http://localhost:3001/auth/facebook/callback",
       profileFields: ["id", "displayName", "emails"],
     },
@@ -71,7 +73,6 @@ passport.use(
         let user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
 
         if (user.rows.length === 0) {
-          // Create new user if not exists
           user = await pool.query(
             "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
             [profile.displayName, email, "user"]
@@ -89,8 +90,8 @@ passport.use(
 passport.use(
   new GoogleStrategy(
     {
-      clientID: "162828373124-04ct27vn8oh29kll5gfb7jcnqe082o7f.apps.googleusercontent.com", // Replace with your Google Client ID
-      clientSecret: "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", // Replace with your Google Client Secret
+      clientID: "162828373124-04ct27vn8oh29kll5gfb7jcnqe082o7f.apps.googleusercontent.com",
+      clientSecret: "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",
       callbackURL: "http://localhost:3001/auth/google/callback",
     },
     async (accessToken, refreshToken, profile, done) => {
@@ -99,7 +100,6 @@ passport.use(
         let user = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
 
         if (user.rows.length === 0) {
-          // Create new user if not exists
           user = await pool.query(
             "INSERT INTO users (fullname, email, role) VALUES ($1, $2, $3) RETURNING *",
             [profile.displayName, email, "user"]
@@ -349,6 +349,10 @@ app.post("/api/reset-password", async (req, res) => {
     res.status(500).json({ message: "Server error, please try again later" });
   }
 });
+
+// Mount the properties routes
+app.use('/api/properties', propertiesRoutes);
+app.use('/api/users', usersRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);

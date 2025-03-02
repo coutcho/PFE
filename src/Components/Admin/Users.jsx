@@ -1,34 +1,111 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaEdit, FaTrash } from 'react-icons/fa';
 
 function Users() {
-  const [users, setUsers] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'admin', status: 'active' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'agent', status: 'active' },
-  ]);
-
+  const [users, setUsers] = useState([]);
   const [editingUser, setEditingUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  const API_BASE_URL = 'http://localhost:3001/api/users';
+  const token = localStorage.getItem('authToken'); // Matches SignInModal
+
+  // Fetch users on mount
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!token) {
+        setError('Please sign in as an admin to view users');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(API_BASE_URL, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication failed or admin access required. Please sign in as an admin.');
+          }
+          throw new Error('Failed to fetch users');
+        }
+        const data = await response.json();
+        const filteredUsers = data.filter(user => user.role === 'admin' || user.role === 'chauffeur');
+        setUsers(filteredUsers);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, [token]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!token) {
+      setError('Please sign in as an admin to add or edit users');
+      return;
+    }
+
     const formData = new FormData(e.target);
-    const newUser = {
-      id: editingUser ? editingUser.id : Date.now(),
+    const userData = {
       name: formData.get('name'),
       email: formData.get('email'),
       role: formData.get('role'),
       phone: formData.get('phone'),
-      status: 'active',
-      joinDate: formData.get('joinDate') || new Date().toISOString().split('T')[0]
+      joinDate: formData.get('joinDate') || new Date().toISOString().split('T')[0],
+      password: editingUser ? undefined : formData.get('password'), // Only send password for new users
     };
 
-    if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? newUser : u));
-      setEditingUser(null);
-    } else {
-      setUsers([...users, newUser]);
+    try {
+      let response;
+      if (editingUser) {
+        response = await fetch(`${API_BASE_URL}/${editingUser.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(userData),
+        });
+      } else {
+        if (!userData.password) {
+          throw new Error('Password is required for new users');
+        }
+        response = await fetch(API_BASE_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(userData),
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Authentication failed or admin access required. Please sign in as an admin.');
+        }
+        throw new Error(errorData.message || (editingUser ? 'Failed to update user' : 'Failed to add user'));
+      }
+      const savedUser = await response.json();
+
+      if (editingUser) {
+        setUsers(users.map(u => (u.id === editingUser.id ? savedUser : u)));
+        setEditingUser(null);
+      } else {
+        if (savedUser.role === 'admin' || savedUser.role === 'chauffeur') {
+          setUsers([...users, savedUser]);
+        }
+      }
+      e.target.reset();
+    } catch (err) {
+      setError(err.message);
     }
-    e.target.reset();
   };
 
   const handleEdit = (user) => {
@@ -36,11 +113,36 @@ function Users() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    if (!token) {
+      setError('Please sign in as an admin to delete users');
+      return;
+    }
+
     if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== id));
+      try {
+        const response = await fetch(`${API_BASE_URL}/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication failed or admin access required. Please sign in as an admin.');
+          }
+          throw new Error('Failed to delete user');
+        }
+        setUsers(users.filter(u => u.id !== id));
+      } catch (err) {
+        setError(err.message);
+      }
     }
   };
+
+  if (!token) return <div>Please sign in as an admin to manage users.</div>;
+  if (loading) return <div>Loading users...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="container-fluid mt-4">
@@ -76,6 +178,18 @@ function Users() {
                     required
                   />
                 </div>
+                {!editingUser && (
+                  <div className="mb-3">
+                    <label htmlFor="password" className="form-label">Password</label>
+                    <input
+                      type="password"
+                      className="form-control"
+                      id="password"
+                      name="password"
+                      required
+                    />
+                  </div>
+                )}
                 <div className="mb-3">
                   <label htmlFor="phone" className="form-label">Phone Number</label>
                   <input
@@ -98,8 +212,7 @@ function Users() {
                   >
                     <option value="">Select role...</option>
                     <option value="admin">Admin</option>
-                    <option value="agent">Agent</option>
-                    <option value="client">Client</option>
+                    <option value="chauffeur">Chauffeur</option>
                   </select>
                 </div>
                 <div className="mb-3">
@@ -143,7 +256,6 @@ function Users() {
                       <th>Name</th>
                       <th>Email</th>
                       <th>Role</th>
-                      <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -153,12 +265,13 @@ function Users() {
                         <td>{user.name}</td>
                         <td>{user.email}</td>
                         <td>
-                          <span className={`badge bg-${user.role === 'admin' ? 'danger' : user.role === 'agent' ? 'primary' : 'success'}`}>
+                          <span
+                            className={`badge bg-${
+                              user.role === 'admin' ? 'danger' : 'primary'
+                            }`}
+                          >
                             {user.role}
                           </span>
-                        </td>
-                        <td>
-                          <span className="badge bg-success">{user.status}</span>
                         </td>
                         <td>
                           <button
