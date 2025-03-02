@@ -75,11 +75,11 @@ function Properties() {
     const formData = new FormData(e.target);
     const propertyData = {
       title: formData.get('title'),
-      price: parseFloat(formData.get('price')),
+      price: parseInt(formData.get('price')), // Already integer
       location: formData.get('location'),
       type: formData.get('type'),
       bedrooms: parseInt(formData.get('bedrooms')),
-      bathrooms: parseFloat(formData.get('bathrooms')),
+      bathrooms: parseInt(formData.get('bathrooms')), // Changed to parseInt
       square_footage: parseInt(formData.get('squareFootage')),
       description: formData.get('description'),
       features,
@@ -185,9 +185,10 @@ function Properties() {
                   />
                 </div>
                 <div className="mb-3">
-                  <label htmlFor="price" className="form-label">Price</label>
+                  <label htmlFor="price" className="form-label">Price (DA)</label>
                   <input
                     type="number"
+                    step="1" // Ensures whole numbers only
                     className="form-control"
                     id="price"
                     name="price"
@@ -227,6 +228,7 @@ function Properties() {
                     <label htmlFor="bedrooms" className="form-label">Bedrooms</label>
                     <input
                       type="number"
+                      step="1" // Ensures whole numbers only
                       className="form-control"
                       id="bedrooms"
                       name="bedrooms"
@@ -238,6 +240,7 @@ function Properties() {
                     <label htmlFor="bathrooms" className="form-label">Bathrooms</label>
                     <input
                       type="number"
+                      step="1" // Ensures whole numbers only
                       className="form-control"
                       id="bathrooms"
                       name="bathrooms"
@@ -250,6 +253,7 @@ function Properties() {
                   <label htmlFor="squareFootage" className="form-label">Square Footage</label>
                   <input
                     type="number"
+                    step="1" // Ensures whole numbers only
                     className="form-control"
                     id="squareFootage"
                     name="squareFootage"
@@ -350,7 +354,7 @@ function Properties() {
                       <th>Price</th>
                       <th>Location</th>
                       <th>Status</th>
-                      <th>Type</th> {/* Replaced Features with Type */}
+                      <th>Type</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -361,7 +365,7 @@ function Properties() {
                           {property.title}
                         </td>
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
-                          ${property.price.toLocaleString()}
+                          {property.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
                         </td>
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
                           {property.location}
@@ -381,7 +385,7 @@ function Properties() {
                         </td>
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
                           {property.type}
-                        </td> {/* Display type instead of features */}
+                        </td>
                         <td>
                           <button
                             className="btn btn-sm btn-primary me-2"
