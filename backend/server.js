@@ -9,14 +9,18 @@ import passport from "passport";
 import session from "express-session";
 import FacebookStrategy from "passport-facebook";
 import GoogleStrategy from "passport-google-oauth20";
-import propertiesRoutes from './propertiesRoutes.js'; // Import the new routes
+import propertiesRoutes from './propertiesRoutes.js';
 import usersRoutes from './usersRoutes.js';
 
 const app = express();
 const port = 3001;
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Match your frontend's origin (Vite default)
+  credentials: true,
+}));
 app.use(express.json());
+app.use(express.static('public')); // Serve static files from public/ (includes uploads/)
 app.use(
   session({
     secret: "your-session-secret", // Replace with a strong secret
@@ -113,7 +117,7 @@ passport.use(
   )
 );
 
-// Existing password check function
+// Password check function
 const checkPasswordWithHIBP = async (password) => {
   try {
     const hash = createHash("sha1").update(password).digest("hex").toUpperCase();
@@ -139,7 +143,7 @@ const checkPasswordWithHIBP = async (password) => {
   }
 };
 
-// Existing Sign-up endpoint
+// Sign-up endpoint
 app.post("/api/signup", async (req, res) => {
   const { nom, prenom, email, pass } = req.body;
 
@@ -186,7 +190,7 @@ app.post("/api/signup", async (req, res) => {
   }
 });
 
-// Existing Sign-in endpoint
+// Sign-in endpoint
 app.post("/api/signin", async (req, res) => {
   const { email, pass } = req.body;
 
@@ -271,7 +275,7 @@ app.get(
   }
 );
 
-// Existing Forgot Password endpoint
+// Forgot Password endpoint
 app.post("/api/forgot-password", async (req, res) => {
   const { email } = req.body;
 
@@ -311,7 +315,7 @@ app.post("/api/forgot-password", async (req, res) => {
   }
 });
 
-// Existing Reset Password endpoint
+// Reset Password endpoint
 app.post("/api/reset-password", async (req, res) => {
   const { token, newPassword } = req.body;
 
@@ -350,7 +354,7 @@ app.post("/api/reset-password", async (req, res) => {
   }
 });
 
-// Mount the properties routes
+// Mount the routes
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/users', usersRoutes);
 
