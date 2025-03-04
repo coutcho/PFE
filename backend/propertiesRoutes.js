@@ -18,13 +18,13 @@ const pool = new Pool({
 // Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'public/uploads/'); // Store files in backend/public/uploads/
+    cb(null, 'public/uploads/');
   },
   filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`); // Unique filename
+    cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
-const upload = multer({ storage }).array('images', 10); // Allow up to 10 images
+const upload = multer({ storage }).array('images', 10);
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
@@ -39,7 +39,7 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Get all properties
-router.get('/', authenticateToken, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM properties');
     res.json(result.rows);
@@ -62,12 +62,12 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Add a new property with image upload
 router.post('/', authenticateToken, upload, async (req, res) => {
   const { title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long } = req.body;
   const images_path = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
   try {
+    const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
     const result = await pool.query(
       'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long, images_path) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
       [
@@ -79,11 +79,11 @@ router.post('/', authenticateToken, upload, async (req, res) => {
         parseInt(bathrooms),
         parseInt(square_footage),
         description,
-        JSON.parse(features), // Parse features from stringified JSON
+        parsedFeatures,
         status,
         lat ? parseFloat(lat) : null,
         long ? parseFloat(long) : null,
-        images_path,
+        JSON.stringify(images_path), // Explicitly stringify to ensure valid JSON
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -92,15 +92,27 @@ router.post('/', authenticateToken, upload, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // Update a property with image upload
 router.put('/:id', authenticateToken, upload, async (req, res) => {
   const { id } = req.params;
-  const { title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long, images_path: existingImages } = req.body;
+  const { title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long, images_path } = req.body;
+  console.log('req.body.images_path type:', typeof images_path);
+  console.log('req.body.images_path value:', images_path);
+  
+  let existingImages = [];
+  try {
+    existingImages = images_path ? JSON.parse(images_path) : [];
+  } catch (err) {
+    console.error('Error parsing images_path:', err);
+    existingImages = [];
+  }
+  
   const newImages = req.files && req.files.length > 0 ? req.files.map(file => `/uploads/${file.filename}`) : [];
-  const images_path = newImages.length > 0 ? newImages : (existingImages ? JSON.parse(existingImages) : []);
+  const updatedImagesPath = [...existingImages, ...newImages];
+  console.log('updatedImagesPath:', updatedImagesPath);
 
   try {
+    const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
     const result = await pool.query(
       'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, square_footage = $7, description = $8, features = $9, status = $10, lat = $11, long = $12, images_path = $13 WHERE id = $14 RETURNING *',
       [
@@ -112,11 +124,11 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
         parseInt(bathrooms),
         parseInt(square_footage),
         description,
-        JSON.parse(features), // Parse features from stringified JSON
+        parsedFeatures,
         status,
         lat ? parseFloat(lat) : null,
         long ? parseFloat(long) : null,
-        images_path,
+        JSON.stringify(updatedImagesPath), // Explicitly stringify to ensure valid JSON
         id,
       ]
     );
@@ -128,13 +140,14 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
   }
 });
 
-// Delete a property
 router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Property not found' });
-    res.status(204).send();
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    res.status(204).send(); // Success, no content
   } catch (err) {
     console.error('Error deleting property:', err);
     res.status(500).json({ error: err.message });

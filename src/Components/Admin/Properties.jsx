@@ -1,18 +1,20 @@
-import { useState, useEffect } from 'react';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { useState, useEffect, useRef } from 'react';
+import { FaEdit, FaTrash, FaPlus, FaImage } from 'react-icons/fa';
 
 function Properties() {
   const [properties, setProperties] = useState([]);
   const [editingProperty, setEditingProperty] = useState(null);
   const [featureInput, setFeatureInput] = useState('');
   const [features, setFeatures] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [previewUrls, setPreviewUrls] = useState([]);
+  const fileInputRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:3001/api/properties';
-  const token = localStorage.getItem('authToken'); // Matches SignInModal's key
+  const token = localStorage.getItem('authToken');
 
-  // Fetch properties on mount
   useEffect(() => {
     const fetchProperties = async () => {
       if (!token) {
@@ -44,10 +46,32 @@ function Properties() {
     fetchProperties();
   }, [token]);
 
+  // Clean up preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url.url));
+    };
+  }, [previewUrls]);
+
   const handleEdit = (property) => {
+    console.log('Editing property:', property);
     setEditingProperty(property);
-    setFeatures(property.features || []);
+    setFeatures(Array.isArray(property.features) ? property.features : []);
+    setSelectedImages([]);
+    setPreviewUrls([]);
     setFeatureInput('');
+    
+    // If property has existing images_path, set them up for display
+    if (property.images_path && Array.isArray(property.images_path)) {
+      const existingImagePreviews = property.images_path.map((img, index) => ({
+        id: `existing-${index}`,
+        url: img,
+        isExisting: true,
+        name: `Image ${index + 1}`
+      }));
+      setPreviewUrls(existingImagePreviews);
+    }
+    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -65,6 +89,33 @@ function Properties() {
     setFeatures(features.filter(feature => feature !== featureToRemove));
   };
 
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    setSelectedImages(prevImages => [...prevImages, ...files]);
+    
+    // Create preview URLs for the selected images
+    const newPreviewUrls = files.map(file => ({
+      id: `new-${Date.now()}-${file.name}`,
+      url: URL.createObjectURL(file),
+      isExisting: false,
+      name: file.name
+    }));
+    
+    setPreviewUrls(prevUrls => [...prevUrls, ...newPreviewUrls]);
+  };
+
+  const removeImage = (imageToRemove) => {
+    if (imageToRemove.isExisting) {
+      // For existing images, just remove from the preview
+      setPreviewUrls(prevUrls => prevUrls.filter(img => img.id !== imageToRemove.id));
+    } else {
+      // For newly added images, remove from both preview and selectedImages
+      setPreviewUrls(prevUrls => prevUrls.filter(img => img.id !== imageToRemove.id));
+      const imageName = imageToRemove.name;
+      setSelectedImages(prevImages => prevImages.filter(img => img.name !== imageName));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
@@ -72,19 +123,38 @@ function Properties() {
       return;
     }
 
-    const formData = new FormData(e.target);
-    const propertyData = {
-      title: formData.get('title'),
-      price: parseInt(formData.get('price')), // Already integer
-      location: formData.get('location'),
-      type: formData.get('type'),
-      bedrooms: parseInt(formData.get('bedrooms')),
-      bathrooms: parseInt(formData.get('bathrooms')), // Changed to parseInt
-      square_footage: parseInt(formData.get('squareFootage')),
-      description: formData.get('description'),
-      features,
-      status: editingProperty ? formData.get('status') : 'Active',
-    };
+    // Create FormData to handle file uploads
+    const formData = new FormData();
+    
+    // Add all form fields to the FormData
+    formData.append('title', e.target.title.value);
+    formData.append('price', parseInt(e.target.price.value));
+    formData.append('location', e.target.location.value);
+    formData.append('type', e.target.type.value);
+    formData.append('bedrooms', parseInt(e.target.bedrooms.value));
+    formData.append('bathrooms', parseInt(e.target.bathrooms.value));
+    formData.append('square_footage', parseInt(e.target.squareFootage.value));
+    formData.append('description', e.target.description.value);
+    formData.append('features', JSON.stringify(features));
+    
+    if (editingProperty) {
+      formData.append('status', e.target.status.value);
+      // Keep track of which existing images are being kept
+      const keptExistingImages = previewUrls
+        .filter(img => img.isExisting)
+        .map(img => img.url);
+      formData.append('images_path', JSON.stringify(keptExistingImages));
+    } else {
+      formData.append('status', 'Active');
+    }
+    
+    if (e.target.lat.value) formData.append('lat', parseFloat(e.target.lat.value));
+    if (e.target.long.value) formData.append('long', parseFloat(e.target.long.value));
+
+    // Append each selected image file
+    selectedImages.forEach((file, index) => {
+      formData.append('images', file);
+    });
 
     try {
       let response;
@@ -92,19 +162,17 @@ function Properties() {
         response = await fetch(`${API_BASE_URL}/${editingProperty.id}`, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify(propertyData),
+          body: formData,
         });
       } else {
         response = await fetch(API_BASE_URL, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify(propertyData),
+          body: formData,
         });
       }
 
@@ -112,9 +180,14 @@ function Properties() {
         if (response.status === 401 || response.status === 403) {
           throw new Error('Authentication failed. Please sign in again.');
         }
-        throw new Error(editingProperty ? 'Failed to update property' : 'Failed to add property');
+        const errorText = await response.text();
+        throw new Error(editingProperty 
+          ? `Failed to update property: ${errorText}` 
+          : `Failed to add property: ${errorText}`);
       }
+      
       const savedProperty = await response.json();
+      console.log('Saved property:', savedProperty);
 
       if (editingProperty) {
         setProperties(properties.map(p => (p.id === editingProperty.id ? savedProperty : p)));
@@ -122,11 +195,24 @@ function Properties() {
       } else {
         setProperties([...properties, savedProperty]);
       }
+      
+      // Clean up
       setFeatures([]);
+      setSelectedImages([]);
       setFeatureInput('');
+      
+      // Revoke all preview URLs to avoid memory leaks
+      previewUrls.forEach(preview => {
+        if (!preview.isExisting) {
+          URL.revokeObjectURL(preview.url);
+        }
+      });
+      setPreviewUrls([]);
+      
       e.target.reset();
     } catch (err) {
       setError(err.message);
+      console.error('Submit error:', err);
     }
   };
 
@@ -188,7 +274,7 @@ function Properties() {
                   <label htmlFor="price" className="form-label">Price (DA)</label>
                   <input
                     type="number"
-                    step="1" // Ensures whole numbers only
+                    step="1"
                     className="form-control"
                     id="price"
                     name="price"
@@ -228,7 +314,7 @@ function Properties() {
                     <label htmlFor="bedrooms" className="form-label">Bedrooms</label>
                     <input
                       type="number"
-                      step="1" // Ensures whole numbers only
+                      step="1"
                       className="form-control"
                       id="bedrooms"
                       name="bedrooms"
@@ -240,7 +326,7 @@ function Properties() {
                     <label htmlFor="bathrooms" className="form-label">Bathrooms</label>
                     <input
                       type="number"
-                      step="1" // Ensures whole numbers only
+                      step="1"
                       className="form-control"
                       id="bathrooms"
                       name="bathrooms"
@@ -253,7 +339,7 @@ function Properties() {
                   <label htmlFor="squareFootage" className="form-label">Square Footage</label>
                   <input
                     type="number"
-                    step="1" // Ensures whole numbers only
+                    step="1"
                     className="form-control"
                     id="squareFootage"
                     name="squareFootage"
@@ -279,6 +365,80 @@ function Properties() {
                   </div>
                 )}
                 <div className="mb-3">
+                  <label htmlFor="lat" className="form-label">Latitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="form-control"
+                    id="lat"
+                    name="lat"
+                    defaultValue={editingProperty?.lat}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="long" className="form-label">Longitude</label>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    className="form-control"
+                    id="long"
+                    name="long"
+                    defaultValue={editingProperty?.long}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label htmlFor="images" className="form-label">Property Images</label>
+                  <div className="input-group mb-3">
+                    <input
+                      type="file"
+                      className="form-control"
+                      id="images"
+                      name="images"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageSelect}
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                    />
+                    <button 
+                      type="button" 
+                      className="btn btn-outline-primary d-flex align-items-center gap-2"
+                      onClick={() => fileInputRef.current.click()}
+                    >
+                      <FaPlus /> Select Images
+                    </button>
+                  </div>
+                  
+                  {previewUrls.length > 0 && (
+                    <div className="image-preview-container mt-2">
+                      <div className="row g-2">
+                        {previewUrls.map((preview) => (
+                          <div key={preview.id} className="col-md-4 col-6 position-relative">
+                            <div className="card h-100">
+                              <img 
+                                src={preview.url} 
+                                alt={preview.name}
+                                className="card-img-top"
+                                style={{ height: '120px', objectFit: 'cover' }}
+                              />
+                              <div className="card-body p-2">
+                                <p className="card-text text-truncate small mb-0">{preview.name}</p>
+                                <button
+                                  type="button"
+                                  className="btn btn-sm btn-danger mt-1"
+                                  onClick={() => removeImage(preview)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="mb-3">
                   <label htmlFor="description" className="form-label">Description</label>
                   <textarea
                     className="form-control"
@@ -287,7 +447,7 @@ function Properties() {
                     rows="3"
                     defaultValue={editingProperty?.description}
                     required
-                  ></textarea>
+                  />
                 </div>
                 <div className="mb-3">
                   <label htmlFor="features" className="form-label">Features (press Enter to add)</label>
@@ -330,7 +490,14 @@ function Properties() {
                       onClick={() => {
                         setEditingProperty(null);
                         setFeatures([]);
+                        setSelectedImages([]);
                         setFeatureInput('');
+                        previewUrls.forEach(preview => {
+                          if (!preview.isExisting) {
+                            URL.revokeObjectURL(preview.url);
+                          }
+                        });
+                        setPreviewUrls([]);
                       }}
                     >
                       Cancel
@@ -355,6 +522,7 @@ function Properties() {
                       <th>Location</th>
                       <th>Status</th>
                       <th>Type</th>
+                      <th>Images</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -376,7 +544,7 @@ function Properties() {
                               property.status === 'Active' ? 'bg-success' :
                               property.status === 'Pending' ? 'bg-warning' :
                               property.status === 'Sold' ? 'bg-secondary' :
-                              property.status === 'For Rent' ? 'bg-info' :
+                              property.status === 'For Rent' ? 'bg-primary' :
                               'bg-light'
                             }`}
                           >
@@ -385,6 +553,12 @@ function Properties() {
                         </td>
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
                           {property.type}
+                        </td>
+                        <td>
+                          <span className="badge bg-info">
+                            <FaImage className="me-1" /> 
+                            {Array.isArray(property.images_path) ? property.images_path.length : 0}
+                          </span>
                         </td>
                         <td>
                           <button

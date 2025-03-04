@@ -1,56 +1,40 @@
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useRef } from 'react';
 import Slider from 'react-slick';
 import PropertyCard from './PropertyCard';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 
-const properties = [
-  {
-    id: 1,
-    image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=800',
-    status: 'Newly Listed',
-    price: 750000,
-    beds: 4,
-    baths: 3,
-    sqft: 2500,
-    address: '123 Main St, Anytown, USA',
-  },
-  {
-    id: 2,
-    image: 'https://images.unsplash.com/photo-1576941089067-2de3c901e126?auto=format&fit=crop&w=800',
-    status: 'Coming Soon',
-    price: 899000,
-    beds: 5,
-    baths: 4,
-    sqft: 3200,
-    address: '456 Oak Ave, Somewhere, USA',
-  },
-  {
-    id: 3,
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800',
-    status: 'Price Reduced',
-    price: 625000,
-    beds: 3,
-    baths: 2,
-    sqft: 1800,
-    address: '789 Pine Rd, Elsewhere, USA',
-  },
-  {
-    id: 4,
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800',
-    status: 'Newly Listed',
-    price: 950000,
-    beds: 4,
-    baths: 3.5,
-    sqft: 2800,
-    address: '321 Maple Dr, Nowhere, USA',
-  },
-];
-
 const PropertyListings = () => {
   const sliderRef = useRef(null);
   const navigate = useNavigate();
+  const [properties, setProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const token = localStorage.getItem('authToken');
+
+  // Fetch properties from the backend
+  useEffect(() => {
+    const fetchProperties = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/properties', {
+          headers: {
+            'Authorization': `Bearer ${token}`, // Include token if required
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch properties');
+        }
+        const data = await response.json();
+        setProperties(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProperties();
+  }, [token]);
 
   const settings = {
     dots: true,
@@ -73,6 +57,9 @@ const PropertyListings = () => {
   const handleListingClick = (id) => {
     navigate(`/listing/${id}`);
   };
+
+  if (loading) return <div className="container py-5">Loading...</div>;
+  if (error) return <div className="container py-5">Error: {error}</div>;
 
   return (
     <div className="container py-5">
