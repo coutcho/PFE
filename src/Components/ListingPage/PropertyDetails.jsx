@@ -1,34 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import { Bed, Bath, Square, Calendar, Heart, Share } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+// src/Components/ListingPage/PropertyDetails.jsx
+import React, { useState } from 'react';
+import { Bed, Bath, Square, Heart, Share } from 'lucide-react';
 
-export default function PropertyDetails() {
-  const { id } = useParams(); // Get property ID from URL (/listing/:id)
-  const [property, setProperty] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+export default function PropertyDetails({ property }) { // Accept property as prop
+  const [isSaved, setIsSaved] = useState(false);
 
-  useEffect(() => {
-    const fetchProperty = async () => {
-      try {
-        const response = await fetch(`http://localhost:3001/api/properties/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch property details');
-        }
-        const data = await response.json();
-        setProperty(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProperty();
-  }, [id]);
+  const handleSaveClick = () => {
+    setIsSaved(!isSaved);
+    // You could add API call here to save to backend if needed
+  };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!property) return <div>Property not found</div>;
+  const handleShareClick = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl)
+      .then(() => {
+        alert('Link copied to clipboard!');
+      })
+      .catch((err) => {
+        console.error('Failed to copy: ', err);
+      });
+  };
 
   return (
     <div className="card mt-4">
@@ -42,11 +33,23 @@ export default function PropertyDetails() {
             </p>
           </div>
           <div className="d-flex gap-2">
-            <button className="btn btn-outline-secondary d-flex align-items-center gap-2">
-              <Heart size={20} />
-              <span>Save</span>
+            <button 
+              className={`btn d-flex align-items-center gap-2 ${
+                isSaved ? 'btn-danger' : 'btn-outline-secondary'
+              }`}
+              onClick={handleSaveClick}
+            >
+              <Heart 
+                size={20} 
+                fill={isSaved ? 'white' : 'none'} 
+                className={isSaved ? 'text-white' : ''}
+              />
+              <span>{isSaved ? 'Saved' : 'Save'}</span>
             </button>
-            <button className="btn btn-outline-secondary d-flex align-items-center gap-2">
+            <button 
+              className="btn btn-outline-secondary d-flex align-items-center gap-2"
+              onClick={handleShareClick}
+            >
               <Share size={20} />
               <span>Share</span>
             </button>
@@ -81,7 +84,6 @@ export default function PropertyDetails() {
               </div>
             </div>
           </div>
-          {/* Year Built not in database; omitting */}
         </div>
 
         <div className="mt-4">

@@ -1,8 +1,9 @@
+// src/Components/ListingPage/ContactAgent.jsx
 import React, { useState } from 'react';
 import { Phone, Mail } from 'lucide-react';
 import PropertyInquiryModal from './PropertyInquiryModal'; // Adjust the import path as needed
 
-export default function ContactAgent() {
+export default function ContactAgent({ property }) { // Add property prop
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Function to open the modal
@@ -48,15 +49,18 @@ export default function ContactAgent() {
 
         {/* Form to Trigger Modal */}
         <form className="mt-4">
-          
           {/* Button to Open Modal */}
           <button type="button" className="btn btn-primary w-100" onClick={openModal}>
             Contacter
           </button>
         </form>
 
-        {/* Embed the Modal Component */}
-        <PropertyInquiryModal show={isModalOpen} onClose={closeModal} />
+        {/* Embed the Modal Component with property prop */}
+        <PropertyInquiryModal 
+          show={isModalOpen} 
+          onClose={closeModal} 
+          property={property} // Pass property to modal
+        />
       </div>
     </div>
   );

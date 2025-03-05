@@ -1,8 +1,9 @@
+// src/Components/ListingPage/PropertyInquiryModal.jsx
 import { useState } from 'react';
 import { format, addDays } from 'date-fns';
-import './ListingCSS.css'
+import './ListingCSS.css';
 
-function PropertyInquiryModal({ show, onClose }) {
+function PropertyInquiryModal({ show, onClose, property }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -60,7 +61,7 @@ function PropertyInquiryModal({ show, onClose }) {
         <div className="modal-content scrollable-content">
           <div className="modal-header bg-light">
             <div>
-              <h5 className="modal-title">23 E Agate Ave</h5>
+              <h5 className="modal-title">{property?.title || 'Property Title'}</h5>
               <small className="text-muted">Schedule a tour or request information</small>
             </div>
             <button type="button" className="btn-close" onClick={onClose}></button>
