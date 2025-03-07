@@ -32,3 +32,15 @@
     display: block; /* Show overlay when sidebar is open */
   }
   /* Ensure all content inside the sidebar is aligned to the left */
+  .list-group {
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    text-shadow: none !important;
+    padding: 0 !important;
+  }
+  
+  .list-group-item-action:hover {
+    background-color: #f8f9fa;
+  }

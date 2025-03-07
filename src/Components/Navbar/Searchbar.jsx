@@ -1,24 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Filter } from 'lucide-react';
 import './SearchBar.css';
 import FilterSidebar from './FilterSideBar';
 
 export default function SearchBar() {
-  const [isFilterOpen, setIsFilterOpen] = useState(false); // State to control the filter sidebar
+  const [isFilterOpen, setIsFilterOpen] = useState(false); // State for filter sidebar
+  const [searchInput, setSearchInput] = useState('');      // State for search input
+  const [suggestions, setSuggestions] = useState([]);      // State for address suggestions
+  const [showSuggestions, setShowSuggestions] = useState(false); // State for dropdown visibility
+  const suggestionsRef = useRef(null);                     // Ref to detect clicks outside
 
+  // Toggle filter sidebar visibility
   const toggleFilter = () => {
-    setIsFilterOpen(!isFilterOpen); // Toggle the filter sidebar visibility
+    setIsFilterOpen(!isFilterOpen);
   };
+
+  // Handle input changes and fetch suggestions from Nominatim API
+  const handleInputChange = async (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+
+    if (value.length > 2) {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}`
+        );
+        const data = await response.json();
+        setSuggestions(data);
+        setShowSuggestions(true);
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+      }
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionClick = (suggestion) => {
+    setSearchInput(suggestion.display_name); // Set input to selected address
+    setShowSuggestions(false);               // Hide suggestions
+  };
+
+  // Hide suggestions when clicking outside
+  const handleClickOutside = (event) => {
+    if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
+      setShowSuggestions(false);
+    }
+  };
+
+  // Add/remove event listener for outside clicks
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div className="search-bar-container w-50 position-relative">
       {/* Input Group */}
-      <div className="input-group shadow d-flex gap-2">
+      <div className="input-group shadow d-flex gap-2 position-relative">
         <input
           type="text"
           className="form-control form-control-lg rounded"
           placeholder="Rechercher une ville, un quartier..."
           aria-label="Search"
+          value={searchInput}
+          onChange={handleInputChange}
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)} // Show suggestions on focus if available
         />
         <button className="btn btn-primary btn-md rounded" type="submit">
           Rechercher
@@ -26,6 +77,26 @@ export default function SearchBar() {
         <button className="btn btn-light rounded-circle" onClick={toggleFilter}>
           <Filter className="w-5 h-5" />
         </button>
+
+        {/* Suggestions Dropdown */}
+        {showSuggestions && suggestions.length > 0 && (
+          <ul
+            ref={suggestionsRef}
+            className="list-group position-absolute w-75"
+            style={{ top: '100%', zIndex: 1000 }}
+          >
+            {suggestions.map((suggestion) => (
+              <li
+                key={suggestion.place_id}
+                className="list-group-item list-group-item-action"
+                onClick={() => handleSuggestionClick(suggestion)}
+                style={{ cursor: 'pointer' }}
+              >
+                {suggestion.display_name}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {/* Filter Sidebar */}
@@ -33,7 +104,7 @@ export default function SearchBar() {
         className={`filter-sidebar bg-dark text-white ${isFilterOpen ? 'open' : ''}`}
         style={{ minWidth: '0px', zIndex: 1000 }}
       >
-        <FilterSidebar onClose={() => setIsFilterOpen(false)} /> {/* Pass onClose handler */}
+        <FilterSidebar onClose={() => setIsFilterOpen(false)} />
       </div>
 
       {/* Overlay to Close Sidebar */}
