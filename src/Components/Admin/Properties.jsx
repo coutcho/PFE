@@ -10,11 +10,15 @@ function Properties() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [propertyType, setPropertyType] = useState('');
+  const [isEquipped, setIsEquipped] = useState(false); // State for toggle
   const fileInputRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:3001/api/properties';
   const token = localStorage.getItem('authToken');
+  const baseUrl = 'http://localhost:3001'; // Base URL for your backend
 
+  // Fetch Properties on Mount
   useEffect(() => {
     const fetchProperties = async () => {
       if (!token) {
@@ -22,12 +26,9 @@ function Properties() {
         setLoading(false);
         return;
       }
-
       try {
         const response = await fetch(API_BASE_URL, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
@@ -46,13 +47,20 @@ function Properties() {
     fetchProperties();
   }, [token]);
 
-  // Clean up preview URLs when component unmounts
+  // Cleanup Preview URLs
   useEffect(() => {
     return () => {
       previewUrls.forEach(url => URL.revokeObjectURL(url.url));
     };
   }, [previewUrls]);
 
+  // Sync propertyType and isEquipped with editingProperty
+  useEffect(() => {
+    setPropertyType(editingProperty?.type || '');
+    setIsEquipped(editingProperty?.equipped || false); // Sync equipped state
+  }, [editingProperty]);
+
+  // Handle Edit Button
   const handleEdit = (property) => {
     console.log('Editing property:', property);
     setEditingProperty(property);
@@ -60,21 +68,21 @@ function Properties() {
     setSelectedImages([]);
     setPreviewUrls([]);
     setFeatureInput('');
-    
-    // If property has existing images_path, set them up for display
+    setIsEquipped(property.equipped || false); // Set equipped state
+
     if (property.images_path && Array.isArray(property.images_path)) {
       const existingImagePreviews = property.images_path.map((img, index) => ({
         id: `existing-${index}`,
-        url: img,
+        url: `${baseUrl}${img}`, // Prepend base URL to the image path
         isExisting: true,
         name: `Image ${index + 1}`
       }));
       setPreviewUrls(existingImagePreviews);
     }
-    
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Feature Input Handling
   const handleFeatureKeyDown = (e) => {
     if (e.key === 'Enter' && featureInput.trim()) {
       e.preventDefault();
@@ -89,33 +97,30 @@ function Properties() {
     setFeatures(features.filter(feature => feature !== featureToRemove));
   };
 
+  // Image Selection Handling
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files);
     setSelectedImages(prevImages => [...prevImages, ...files]);
-    
-    // Create preview URLs for the selected images
     const newPreviewUrls = files.map(file => ({
       id: `new-${Date.now()}-${file.name}`,
       url: URL.createObjectURL(file),
       isExisting: false,
       name: file.name
     }));
-    
     setPreviewUrls(prevUrls => [...prevUrls, ...newPreviewUrls]);
   };
 
   const removeImage = (imageToRemove) => {
     if (imageToRemove.isExisting) {
-      // For existing images, just remove from the preview
       setPreviewUrls(prevUrls => prevUrls.filter(img => img.id !== imageToRemove.id));
     } else {
-      // For newly added images, remove from both preview and selectedImages
       setPreviewUrls(prevUrls => prevUrls.filter(img => img.id !== imageToRemove.id));
       const imageName = imageToRemove.name;
       setSelectedImages(prevImages => prevImages.filter(img => img.name !== imageName));
     }
   };
 
+  // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!token) {
@@ -123,36 +128,93 @@ function Properties() {
       return;
     }
 
-    // Create FormData to handle file uploads
     const formData = new FormData();
-    
-    // Add all form fields to the FormData
     formData.append('title', e.target.title.value);
-    formData.append('price', parseInt(e.target.price.value));
+
+    const priceValue = e.target.price.value;
+    const parsedPrice = parseInt(priceValue);
+    if (isNaN(parsedPrice)) {
+      setError('Price must be a valid number');
+      return;
+    }
+    formData.append('price', parsedPrice);
+
     formData.append('location', e.target.location.value);
-    formData.append('type', e.target.type.value);
-    formData.append('bedrooms', parseInt(e.target.bedrooms.value));
-    formData.append('bathrooms', parseInt(e.target.bathrooms.value));
-    formData.append('square_footage', parseInt(e.target.squareFootage.value));
+    formData.append('type', propertyType);
+
+    const bedroomsValue = e.target.bedrooms.value;
+    const parsedBedrooms = parseInt(bedroomsValue);
+    if (isNaN(parsedBedrooms)) {
+      setError('Bedrooms must be a valid number');
+      return;
+    }
+    formData.append('bedrooms', parsedBedrooms);
+
+    if (propertyType === 'villa') {
+      const bathroomsValue = e.target.bathrooms.value;
+      if (bathroomsValue) {
+        const parsedBathrooms = parseInt(bathroomsValue);
+        if (isNaN(parsedBathrooms)) {
+          setError('Bathrooms must be a valid number');
+          return;
+        }
+        formData.append('bathrooms', parsedBathrooms);
+      }
+    } else if (propertyType) {
+      const etageValue = e.target.etage.value;
+      if (etageValue) {
+        const parsedEtage = parseInt(etageValue);
+        if (isNaN(parsedEtage)) {
+          setError('Etage must be a valid number');
+          return;
+        }
+        formData.append('etage', parsedEtage);
+      }
+    }
+
+    const squareFootageValue = e.target.squareFootage.value;
+    const parsedSquareFootage = parseInt(squareFootageValue);
+    if (isNaN(parsedSquareFootage)) {
+      setError('Square Footage must be a valid number');
+      return;
+    }
+    formData.append('square_footage', parsedSquareFootage);
+
     formData.append('description', e.target.description.value);
     formData.append('features', JSON.stringify(features));
-    
+    formData.append('equipped', isEquipped); // Add equipped to form data
+
     if (editingProperty) {
       formData.append('status', e.target.status.value);
-      // Keep track of which existing images are being kept
       const keptExistingImages = previewUrls
         .filter(img => img.isExisting)
-        .map(img => img.url);
+        .map(img => img.url.replace(baseUrl, '')); // Remove base URL to store relative path
       formData.append('images_path', JSON.stringify(keptExistingImages));
     } else {
       formData.append('status', 'Active');
     }
-    
-    if (e.target.lat.value) formData.append('lat', parseFloat(e.target.lat.value));
-    if (e.target.long.value) formData.append('long', parseFloat(e.target.long.value));
 
-    // Append each selected image file
-    selectedImages.forEach((file, index) => {
+    const latValue = e.target.lat.value;
+    if (latValue) {
+      const parsedLat = parseFloat(latValue);
+      if (isNaN(parsedLat)) {
+        setError('Latitude must be a valid number');
+        return;
+      }
+      formData.append('lat', parsedLat);
+    }
+
+    const longValue = e.target.long.value;
+    if (longValue) {
+      const parsedLong = parseFloat(longValue);
+      if (isNaN(parsedLong)) {
+        setError('Longitude must be a valid number');
+        return;
+      }
+      formData.append('long', parsedLong);
+    }
+
+    selectedImages.forEach((file) => {
       formData.append('images', file);
     });
 
@@ -161,17 +223,13 @@ function Properties() {
       if (editingProperty) {
         response = await fetch(`${API_BASE_URL}/${editingProperty.id}`, {
           method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
         });
       } else {
         response = await fetch(API_BASE_URL, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
         });
       }
@@ -181,11 +239,11 @@ function Properties() {
           throw new Error('Authentication failed. Please sign in again.');
         }
         const errorText = await response.text();
-        throw new Error(editingProperty 
-          ? `Failed to update property: ${errorText}` 
+        throw new Error(editingProperty
+          ? `Failed to update property: ${errorText}`
           : `Failed to add property: ${errorText}`);
       }
-      
+
       const savedProperty = await response.json();
       console.log('Saved property:', savedProperty);
 
@@ -195,20 +253,18 @@ function Properties() {
       } else {
         setProperties([...properties, savedProperty]);
       }
-      
-      // Clean up
+
       setFeatures([]);
       setSelectedImages([]);
       setFeatureInput('');
-      
-      // Revoke all preview URLs to avoid memory leaks
+      setPropertyType('');
+      setIsEquipped(false); // Reset equipped state
       previewUrls.forEach(preview => {
         if (!preview.isExisting) {
           URL.revokeObjectURL(preview.url);
         }
       });
       setPreviewUrls([]);
-      
       e.target.reset();
     } catch (err) {
       setError(err.message);
@@ -216,19 +272,17 @@ function Properties() {
     }
   };
 
+  // Delete Property
   const handleDelete = async (id) => {
     if (!token) {
       setError('Please sign in to delete properties');
       return;
     }
-
     if (window.confirm('Are you sure you want to delete this property?')) {
       try {
         const response = await fetch(`${API_BASE_URL}/${id}`, {
           method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
           if (response.status === 401 || response.status === 403) {
@@ -243,6 +297,7 @@ function Properties() {
     }
   };
 
+  // Render
   if (!token) return <div>Please sign in to manage properties.</div>;
   if (loading) return <div>Loading properties...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -250,7 +305,7 @@ function Properties() {
   return (
     <div className="container-fluid mt-4">
       <h1 className="mb-4">Properties</h1>
-      
+
       <div className="row">
         <div className="col-md-4 mb-4">
           <div className="card">
@@ -299,15 +354,28 @@ function Properties() {
                     className="form-select"
                     id="type"
                     name="type"
-                    defaultValue={editingProperty?.type || ''}
+                    value={propertyType}
+                    onChange={(e) => setPropertyType(e.target.value)}
                     required
                   >
                     <option value="">Select type...</option>
-                    <option value="house">House</option>
-                    <option value="apartment">Apartment</option>
-                    <option value="condo">Condo</option>
-                    <option value="townhouse">Townhouse</option>
+                    <option value="apartement">Apartement</option>
+                    <option value="villa">Villa</option>
+                    <option value="bureau">Bureau</option>
                   </select>
+                </div>
+                {/* Bootstrap Switch Toggle for Equipped Status */}
+                <div className="mb-3 form-check form-switch d-flex align-items-center">
+                  <input
+                    type="checkbox"
+                    className="form-check-input me-2"
+                    id="equipped"
+                    checked={isEquipped}
+                    onChange={() => setIsEquipped(!isEquipped)}
+                  />
+                  <label className="form-check-label" htmlFor="equipped">
+                    Équipé
+                  </label>
                 </div>
                 <div className="row mb-3">
                   <div className="col">
@@ -322,18 +390,33 @@ function Properties() {
                       required
                     />
                   </div>
-                  <div className="col">
-                    <label htmlFor="bathrooms" className="form-label">Bathrooms</label>
-                    <input
-                      type="number"
-                      step="1"
-                      className="form-control"
-                      id="bathrooms"
-                      name="bathrooms"
-                      defaultValue={editingProperty?.bathrooms}
-                      required
-                    />
-                  </div>
+                  {propertyType === 'villa' ? (
+                    <div className="col">
+                      <label htmlFor="bathrooms" className="form-label">Bathrooms</label>
+                      <input
+                        type="number"
+                        step="1"
+                        className="form-control"
+                        id="bathrooms"
+                        name="bathrooms"
+                        defaultValue={editingProperty?.bathrooms}
+                        required
+                      />
+                    </div>
+                  ) : propertyType ? (
+                    <div className="col">
+                      <label htmlFor="etage" className="form-label">Etage</label>
+                      <input
+                        type="number"
+                        step="1"
+                        className="form-control"
+                        id="etage"
+                        name="etage"
+                        defaultValue={editingProperty?.etage}
+                        required
+                      />
+                    </div>
+                  ) : null}
                 </div>
                 <div className="mb-3">
                   <label htmlFor="squareFootage" className="form-label">Square Footage</label>
@@ -400,23 +483,22 @@ function Properties() {
                       ref={fileInputRef}
                       style={{ display: 'none' }}
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       className="btn btn-outline-primary d-flex align-items-center gap-2"
                       onClick={() => fileInputRef.current.click()}
                     >
                       <FaPlus /> Select Images
                     </button>
                   </div>
-                  
                   {previewUrls.length > 0 && (
                     <div className="image-preview-container mt-2">
                       <div className="row g-2">
                         {previewUrls.map((preview) => (
                           <div key={preview.id} className="col-md-4 col-6 position-relative">
                             <div className="card h-100">
-                              <img 
-                                src={preview.url} 
+                              <img
+                                src={preview.url}
                                 alt={preview.name}
                                 className="card-img-top"
                                 style={{ height: '120px', objectFit: 'cover' }}
@@ -492,6 +574,8 @@ function Properties() {
                         setFeatures([]);
                         setSelectedImages([]);
                         setFeatureInput('');
+                        setPropertyType('');
+                        setIsEquipped(false); // Reset equipped state
                         previewUrls.forEach(preview => {
                           if (!preview.isExisting) {
                             URL.revokeObjectURL(preview.url);
@@ -508,7 +592,7 @@ function Properties() {
             </div>
           </div>
         </div>
-        
+
         <div className="col-md-8">
           <div className="card">
             <div className="card-body">
@@ -522,7 +606,7 @@ function Properties() {
                       <th>Location</th>
                       <th>Status</th>
                       <th>Type</th>
-                      <th>Images</th>
+                      <th>Equipped</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -554,11 +638,8 @@ function Properties() {
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
                           {property.type}
                         </td>
-                        <td>
-                          <span className="badge bg-info">
-                            <FaImage className="me-1" /> 
-                            {Array.isArray(property.images_path) ? property.images_path.length : 0}
-                          </span>
+                        <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
+                          {property.equipped ? 'Yes' : 'No'}
                         </td>
                         <td>
                           <button

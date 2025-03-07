@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler, FaBuilding, FaChair } from 'react-icons/fa';
 
 const PropertyCard = ({ property }) => {
+  // Log the property prop to debug
+  console.log('PropertyCard received property:', property);
+
   const [isFavorite, setIsFavorite] = useState(false);
+
+  // Guard clause for undefined property
+  if (!property) {
+    return <div>Loading property...</div>;
+  }
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
     setIsFavorite(!isFavorite);
   };
 
-  const imageSrc = property.images_path && property.images_path.length > 0 
+  const imageSrc = property.images_path && Array.isArray(property.images_path) && property.images_path.length > 0 
     ? `http://localhost:3001/${property.images_path[0]}` 
     : 'https://via.placeholder.com/800';
 
@@ -27,11 +35,11 @@ const PropertyCard = ({ property }) => {
         <img
           src={imageSrc}
           className="card-img-top"
-          alt={property.title}
+          alt={property.title || 'Property Image'}
           style={{ height: '200px', objectFit: 'cover' }}
         />
         <span className="position-absolute top-0 start-0 m-2 badge bg-primary">
-          {property.status}
+          {property.status || 'Unknown'}
         </span>
         <button
           className="position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2"
@@ -42,20 +50,30 @@ const PropertyCard = ({ property }) => {
       </div>
       <div className="card-body">
         <h5 className="card-title fw-bold">
-          {property.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
+          {(typeof property.price === 'number' ? property.price : 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
         </h5>
         <div className="d-flex gap-3 mb-2">
           <span>
-            <FaBed className="me-1" /> {property.bedrooms} beds
+            <FaBed className="me-1" /> {property.bedrooms || 0} chambre
+          </span>
+          {property.bathrooms !== undefined && property.bathrooms !== null ? (
+            <span>
+              <FaBath className="me-1" /> {property.bathrooms} baths
+            </span>
+          ) : (
+            <span>
+              <FaBuilding className="me-1" /> 
+              {property.etage !== undefined && property.etage !== null ? `${property.etage}${property.etage === 1 ? "er" : "ème"}` : "N/A"} etg
+            </span>
+          )}
+          <span>
+            <FaRuler className="me-1" /> {(property.square_footage || 0).toLocaleString('fr-DZ')} m²
           </span>
           <span>
-            <FaBath className="me-1" /> {property.bathrooms} baths
-          </span>
-          <span>
-            <FaRuler className="me-1" /> {property.square_footage.toLocaleString('en-US')} sqft
+            <FaChair className="me-1" /> {(property.equipped ?? false) ? 'oui' : 'non'}
           </span>
         </div>
-        <p className="card-text text-muted">{property.location}</p>
+        <p className="card-text text-muted">{property.location || 'Unknown Location'}</p>
       </div>
     </motion.div>
   );

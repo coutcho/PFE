@@ -1,8 +1,7 @@
-// src/Components/ListingPage/PropertyDetails.jsx
 import React, { useState } from 'react';
-import { Bed, Bath, Square, Heart, Share } from 'lucide-react';
+import { Bed, Bath, Square, Heart, Share, Building, Sofa } from 'lucide-react';
 
-export default function PropertyDetails({ property }) { // Accept property as prop
+export default function PropertyDetails({ property }) {
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSaveClick = () => {
@@ -21,15 +20,21 @@ export default function PropertyDetails({ property }) { // Accept property as pr
       });
   };
 
+  // Capitalize the first letter of the title
+  const capitalizeTitle = (title) => {
+    if (!title) return ''; // Handle null or undefined
+    return title.charAt(0).toUpperCase() + title.slice(1);
+  };
+
   return (
     <div className="card mt-4">
       <div className="card-body">
         <div className="d-flex justify-content-between align-items-start">
           <div>
-            <h1 className="h2 fw-bold">{property.title}</h1>
+            <h1 className="h2 fw-bold">{capitalizeTitle(property.title)}</h1>
             <p className="text-muted fs-5">{property.location}</p>
             <p className="fs-3 fw-bold text-primary mt-3">
-              {property.price.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
+              {property.price.toLocaleString('en-US')} DA
             </p>
           </div>
           <div className="d-flex gap-2">
@@ -67,20 +72,43 @@ export default function PropertyDetails({ property }) { // Accept property as pr
             </div>
           </div>
           <div className="col-6 col-md-3">
-            <div className="d-flex align-items-center">
-              <Bath className="text-primary me-2" size={24} />
-              <div>
-                <small className="text-muted">Bathrooms</small>
-                <p className="mb-0 fw-semibold">{property.bathrooms}</p>
+            {property.bathrooms !== undefined && property.bathrooms !== null ? (
+              <div className="d-flex align-items-center">
+                <Bath className="text-primary me-2" size={24} />
+                <div>
+                  <small className="text-muted">Bathrooms</small>
+                  <p className="mb-0 fw-semibold">{property.bathrooms}</p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="d-flex align-items-center">
+                <Building className="text-primary me-2" size={24} />
+                <div>
+                  <small className="text-muted">Etage</small>
+                  <p className="mb-0 fw-semibold">
+                    {property.etage !== undefined && property.etage !== null 
+                      ? `${property.etage}${property.etage === 1 ? "er" : "ème"}` 
+                      : "N/A"}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="col-6 col-md-3">
             <div className="d-flex align-items-center">
               <Square className="text-primary me-2" size={24} />
               <div>
-                <small className="text-muted">Square Feet</small>
-                <p className="mb-0 fw-semibold">{property.square_footage.toLocaleString('en-US')}</p>
+                <small className="text-muted">Superfice (m²)</small>
+                <p className="mb-0 fw-semibold">{property.square_footage.toLocaleString('fr-DZ')}</p>
+              </div>
+            </div>
+          </div>
+          <div className="col-6 col-md-3">
+            <div className="d-flex align-items-center">
+              <Sofa className="text-primary me-2" size={24} />
+              <div>
+                <small className="text-muted">Équipée</small>
+                <p className="mb-0 fw-semibold">{property.equipped ? 'Oui' : 'Non'}</p>
               </div>
             </div>
           </div>

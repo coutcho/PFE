@@ -331,3 +331,6 @@
     padding: 6px 12px !important;
   }
 }
+.leaflet-container{
+  z-index: 0;
+}

@@ -19,7 +19,7 @@ export default function ContactAgent({ property }) { // Add property prop
   return (
     <div className="card mt-4 agent">
       <div className="card-body">
-        <h2 className="h4 fw-bold">Contact Agent</h2>
+        <h2 className="h4 fw-bold">Contact Owner</h2>
 
         {/* Agent Details */}
         <div className="d-flex align-items-center gap-3 mt-3">

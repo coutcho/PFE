@@ -4,6 +4,8 @@ import Slider from 'react-slick';
 import PropertyCard from './PropertyCard';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
+import '../../App.css';
+import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 const PropertyListings = () => {
   const sliderRef = useRef(null);
@@ -19,7 +21,7 @@ const PropertyListings = () => {
       try {
         const response = await fetch('http://localhost:3001/api/properties', {
           headers: {
-            'Authorization': `Bearer ${token}`, // Include token if required
+            'Authorization': `Bearer ${token}`,
           },
         });
         if (!response.ok) {
@@ -36,12 +38,35 @@ const PropertyListings = () => {
     fetchProperties();
   }, [token]);
 
+  // Custom arrow components
+  const PrevArrow = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="slick-prev custom-arrow"
+      style={{ left: "-40px" }}
+    >
+      <FaChevronLeft />
+    </button>
+  );
+
+  const NextArrow = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="slick-next custom-arrow"
+      style={{ right: "-40px" }}
+    >
+      <FaChevronRight />
+    </button>
+  );
+
   const settings = {
     dots: true,
     infinite: false,
     speed: 500,
     slidesToShow: 3,
     slidesToScroll: 1,
+    prevArrow: <PrevArrow />,
+    nextArrow: <NextArrow />,
     responsive: [
       {
         breakpoint: 1024,

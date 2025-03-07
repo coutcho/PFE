@@ -26,6 +26,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage }).array('images', 10);
 
+// Middleware to authenticate JWT token
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -38,10 +39,13 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Get all properties
+// **GET /api/properties** - Fetch all properties
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM properties');
+    const result = await pool.query(
+      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped FROM properties'
+    );
+    console.log('Query result:', result.rows); // Debug log
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching properties:', err);
@@ -49,12 +53,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get a single property by ID
+// **GET /api/properties/:id** - Fetch a single property by ID
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query('SELECT * FROM properties WHERE id = $1', [id]);
+    const result = await pool.query(
+      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped FROM properties WHERE id = $1',
+      [id]
+    );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Property not found' });
+    console.log('Fetched property:', result.rows[0]); // Debug log
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error fetching property:', err);
@@ -62,43 +70,48 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// **POST /api/properties** - Create a new property
 router.post('/', authenticateToken, upload, async (req, res) => {
-  const { title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long } = req.body;
+  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, equipped } = req.body;
   const images_path = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
+    const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false; // Default to false if not 'true' or 'false'
+
     const result = await pool.query(
-      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long, images_path) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *',
+      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped',
       [
         title,
         parseInt(price),
         location,
         type,
         parseInt(bedrooms),
-        parseInt(bathrooms),
+        type === 'villa' && bathrooms ? parseInt(bathrooms) : null,
+        type !== 'villa' && etage ? parseInt(etage) : null,
         parseInt(square_footage),
         description,
         parsedFeatures,
         status,
         lat ? parseFloat(lat) : null,
         long ? parseFloat(long) : null,
-        JSON.stringify(images_path), // Explicitly stringify to ensure valid JSON
+        JSON.stringify(images_path),
+        parsedEquipped,
       ]
     );
+    console.log('Inserted property:', result.rows[0]); // Debug log
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Error adding property:', err);
     res.status(500).json({ error: err.message });
   }
 });
-// Update a property with image upload
+
+// **PUT /api/properties/:id** - Update an existing property
 router.put('/:id', authenticateToken, upload, async (req, res) => {
   const { id } = req.params;
-  const { title, price, location, type, bedrooms, bathrooms, square_footage, description, features, status, lat, long, images_path } = req.body;
-  console.log('req.body.images_path type:', typeof images_path);
-  console.log('req.body.images_path value:', images_path);
-  
+  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipped } = req.body;
+
   let existingImages = [];
   try {
     existingImages = images_path ? JSON.parse(images_path) : [];
@@ -106,33 +119,37 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
     console.error('Error parsing images_path:', err);
     existingImages = [];
   }
-  
+
   const newImages = req.files && req.files.length > 0 ? req.files.map(file => `/uploads/${file.filename}`) : [];
   const updatedImagesPath = [...existingImages, ...newImages];
-  console.log('updatedImagesPath:', updatedImagesPath);
+  const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false; // Default to false if not 'true' or 'false'
 
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
+
     const result = await pool.query(
-      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, square_footage = $7, description = $8, features = $9, status = $10, lat = $11, long = $12, images_path = $13 WHERE id = $14 RETURNING *',
+      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, etage = $7, square_footage = $8, description = $9, features = $10, status = $11, lat = $12, long = $13, images_path = $14, equipe = $15 WHERE id = $16 RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped',
       [
         title,
         parseInt(price),
         location,
         type,
         parseInt(bedrooms),
-        parseInt(bathrooms),
+        type === 'villa' && bathrooms ? parseInt(bathrooms) : null,
+        type !== 'villa' && etage ? parseInt(etage) : null,
         parseInt(square_footage),
         description,
         parsedFeatures,
         status,
         lat ? parseFloat(lat) : null,
         long ? parseFloat(long) : null,
-        JSON.stringify(updatedImagesPath), // Explicitly stringify to ensure valid JSON
+        JSON.stringify(updatedImagesPath),
+        parsedEquipped,
         id,
       ]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Property not found' });
+    console.log('Updated property:', result.rows[0]); // Debug log
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating property:', err);
@@ -140,6 +157,7 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
   }
 });
 
+// **DELETE /api/properties/:id** - Delete a property
 router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {

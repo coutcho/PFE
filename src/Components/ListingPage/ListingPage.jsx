@@ -46,7 +46,7 @@ function ListingPage() {
             <div className="row">
               <div className="col-lg-8">
                 <PropertyDetails property={property} />
-                <PropertyMap /> {/* Add property prop if needed */}
+                <PropertyMap location={{ lat: property.lat, lng: property.long }} address={property.location} />
               </div>
               <div className="col-lg-4">
                 <ContactAgent property={property} />

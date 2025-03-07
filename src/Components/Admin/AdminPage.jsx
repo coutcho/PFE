@@ -1,5 +1,4 @@
 import { Routes, Route } from "react-router-dom";
-import Sidebar from "./Sidebar";
 import NavbarD from "./NavbarD";
 import Dashboard from "./Dashboard";
 import Properties from "./Properties";
@@ -8,7 +7,7 @@ import Users from "./Users";
 function AdminPage() {
   return (
     <div className="d-flex">
-      <Sidebar />
+      
       <div className="flex-grow-1">
         <NavbarD />
         <div style={{ marginTop: "56px" }}>

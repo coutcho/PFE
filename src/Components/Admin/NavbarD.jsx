@@ -1,5 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate for redirection
-import { FaSignOutAlt } from 'react-icons/fa';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaTachometerAlt, FaHome, FaUsers, FaInbox, FaCog, FaSignOutAlt } from 'react-icons/fa';
 
 function NavbarD() {
   const navigate = useNavigate(); // Hook to programmatically navigate
@@ -44,19 +44,34 @@ function NavbarD() {
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav me-auto">
             <li className="nav-item">
-              <Link className="nav-link" to="/">Dashboard</Link>
+              <Link className="nav-link" to="/admin">
+                <FaTachometerAlt className="me-2" />
+                Dashboard
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/properties">Properties</Link>
+              <Link className="nav-link" to="/admin/properties">
+                <FaHome className="me-2" />
+                Properties
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/users">Users</Link>
+              <Link className="nav-link" to="/admin/users">
+                <FaUsers className="me-2" />
+                Users
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/inquiries">Inquiries</Link>
+              <Link className="nav-link" to="/admin/inquiries">
+                <FaInbox className="me-2" />
+                Inquiries
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/settings">Settings</Link>
+              <Link className="nav-link" to="/admin/settings">
+                <FaCog className="me-2" />
+                Settings
+              </Link>
             </li>
           </ul>
           <button className="btn btn-outline-light" onClick={handleLogout}>
