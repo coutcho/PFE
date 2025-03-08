@@ -11,7 +11,7 @@ const defaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  shadowSize: [41, 41],
 });
 
 const selectedIcon = L.icon({
@@ -20,7 +20,7 @@ const selectedIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  shadowSize: [41, 41],
 });
 
 // Component to update map view
@@ -37,12 +37,20 @@ function MapUpdater({ center, zoom }) {
 const AllMap = ({ properties, selectedProperty }) => {
   // Default center (NYC)
   const defaultCenter = [40.7128, -74.0060];
-  // Use selected property's coordinates if available, else default
-  const center = selectedProperty
-    ? [selectedProperty.lat, selectedProperty.lng]
+
+  // Filter properties with valid lat/long
+  const validProperties = properties.filter(
+    (property) => property.lat != null && property.long != null
+  );
+
+  // Determine center: selected property if valid, first valid property, or default
+  const center = selectedProperty && selectedProperty.lat != null && selectedProperty.long != null
+    ? [selectedProperty.lat, selectedProperty.long]
+    : validProperties.length > 0
+    ? [validProperties[0].lat, validProperties[0].long]
     : defaultCenter;
-  // Zoom level: closer if selected, broader otherwise
-  const zoom = selectedProperty ? 15 : 13;
+
+  const zoom = selectedProperty && selectedProperty.lat != null && selectedProperty.long != null ? 15 : 13;
 
   return (
     <MapContainer
@@ -55,21 +63,25 @@ const AllMap = ({ properties, selectedProperty }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
-      {properties.map((property) => (
+      {validProperties.map((property) => (
         <Marker
           key={property.id}
-          position={[property.lat, property.lng]}
+          position={[property.lat, property.long]}
           icon={selectedProperty?.id === property.id ? selectedIcon : defaultIcon}
         >
           <Popup>
             <div>
               <img
-                src={property.image}
-                alt={property.address}
+                src={
+                  property.images_path && property.images_path.length > 0
+                    ? `http://localhost:3001${property.images_path[0]}`
+                    : 'https://via.placeholder.com/200x150'
+                }
+                alt={property.title || 'Property Image'}
                 style={{ width: '200px', height: '150px', objectFit: 'cover' }}
               />
-              <h6 className="mt-2">${property.price.toLocaleString()}</h6>
-              <p className="mb-0">{property.address}</p>
+              <h6 className="mt-2">{property.price.toLocaleString()} DA</h6>
+              <p className="mb-0">{property.location}</p>
             </div>
           </Popup>
         </Marker>

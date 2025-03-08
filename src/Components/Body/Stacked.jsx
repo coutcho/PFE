@@ -1,5 +1,6 @@
 import React from 'react';
-import PropertyCard from './PropertyCard'; // Adjust the import path as necessary
+import PropertyCard from './PropertyCard';
+import "./StackedCSS.css"
 
 const Stacked = ({ properties, onSelectProperty, selectedProperty }) => {
   return (
@@ -7,9 +8,16 @@ const Stacked = ({ properties, onSelectProperty, selectedProperty }) => {
       {properties.map((property) => (
         <div
           key={property.id}
-          className={`mb-3 property-card ${selectedProperty?.id === property.id ? 'border-primary selected' : ''}`}
+          className={`mb-3 property-card ${
+            selectedProperty?.id === property.id 
+              ? 'border-primary selected shadow-lg' 
+              : 'shadow-sm hover:shadow-md'
+          }`}
           onClick={() => onSelectProperty(property)}
-          style={{ cursor: 'pointer' }}
+          style={{ 
+            cursor: 'pointer',
+            transition: 'all 0.2s ease-in-out',
+          }}
         >
           <PropertyCard property={property} />
         </div>

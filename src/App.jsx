@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { jwtDecode } from "jwt-decode";
 import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
-import AuthCallback from './Components/Navbar/AuthCallback'; // Import the new component
+import AuthCallback from './Components/Navbar/AuthCallback';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import PropertyListings from './Components/Body/PropertyListings';
+import AllListings from './Components/Body/AllListings'; // Add this import
 import Footer from './Components/Footer/Footer';
 import ListingPage from './Components/ListingPage/ListingPage';
 import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
@@ -61,6 +62,16 @@ export default function App() {
               <div className="bg-light bg-gray-100">
                 <PropertyListings />
               </div>
+              <Footer />
+            </Layout>
+          }
+        />
+        {/* All Listings Route */}
+        <Route
+          path="/listings"
+          element={
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <AllListings />
               <Footer />
             </Layout>
           }

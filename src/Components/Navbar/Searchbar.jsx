@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Filter } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Add this import
 import './SearchBar.css';
 import FilterSidebar from './FilterSideBar';
 
 export default function SearchBar() {
-  const [isFilterOpen, setIsFilterOpen] = useState(false); // State for filter sidebar
-  const [searchInput, setSearchInput] = useState('');      // State for search input
-  const [suggestions, setSuggestions] = useState([]);      // State for address suggestions
-  const [showSuggestions, setShowSuggestions] = useState(false); // State for dropdown visibility
-  const suggestionsRef = useRef(null);                     // Ref to detect clicks outside
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef(null);
+  const navigate = useNavigate(); // Hook for navigation
 
   // Toggle filter sidebar visibility
   const toggleFilter = () => {
@@ -39,8 +41,15 @@ export default function SearchBar() {
 
   // Handle suggestion selection
   const handleSuggestionClick = (suggestion) => {
-    setSearchInput(suggestion.display_name); // Set input to selected address
-    setShowSuggestions(false);               // Hide suggestions
+    setSearchInput(suggestion.display_name);
+    setShowSuggestions(false);
+    // Optionally navigate with search data (not required for this task)
+    navigate('/listings'); // Navigate even with suggestion
+  };
+
+  // Handle search button click
+  const handleSearchClick = () => {
+    navigate('/listings'); // Navigate to AllListings page
   };
 
   // Hide suggestions when clicking outside
@@ -50,7 +59,6 @@ export default function SearchBar() {
     }
   };
 
-  // Add/remove event listener for outside clicks
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -69,9 +77,13 @@ export default function SearchBar() {
           aria-label="Search"
           value={searchInput}
           onChange={handleInputChange}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)} // Show suggestions on focus if available
+          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
         />
-        <button className="btn btn-primary btn-md rounded" type="submit">
+        <button
+          className="btn btn-primary btn-md rounded"
+          type="button" // Change to button to prevent form submission
+          onClick={handleSearchClick} // Add onClick handler
+        >
           Rechercher
         </button>
         <button className="btn btn-light rounded-circle" onClick={toggleFilter}>
