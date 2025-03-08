@@ -11,7 +11,10 @@ export default function Navbar() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(!!localStorage.getItem("authToken"));
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const navigate = useNavigate();
+  const token = localStorage.getItem("authToken");
+  const API_INQUIRIES_URL = "http://localhost:3001/api/inquiries";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -20,6 +23,30 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const checkUnreadMessages = async () => {
+      if (!token) {
+        setHasUnreadMessages(false);
+        return;
+      }
+      try {
+        const response = await fetch(`${API_INQUIRIES_URL}/user/unread-count`, {
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Failed to fetch unread count");
+        const data = await response.json();
+        setHasUnreadMessages(data.unreadCount > 0);
+      } catch (err) {
+        console.error("Error checking unread messages:", err);
+        setHasUnreadMessages(false);
+      }
+    };
+
+    checkUnreadMessages();
+    const interval = setInterval(checkUnreadMessages, 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [token]);
 
   const closeModal = () => {
     setShowSignInModal(false);
@@ -46,11 +73,13 @@ export default function Navbar() {
       }
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
+      setHasUnreadMessages(false); // Reset unread status on logout
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
+      setHasUnreadMessages(false);
       navigate("/");
     }
   };
@@ -104,9 +133,17 @@ export default function Navbar() {
                 Louer
               </a>
               <ul className="dropdown-menu">
-                <li><a className="dropdown-item" href="#">Maison</a></li>
-                <li><a className="dropdown-item" href="#">Villa</a></li>
-                <li><a className="dropdown-item" href="#">Something else here</a></li>
+                <li>
+                  <Link className="dropdown-item" to="/listings?type=appartement">
+                    Appartement
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/listings?type=villa">
+                    Villa
+                  </Link>
+                </li>
+                <li><a className="dropdown-item" href="#">Bureau</a></li>
               </ul>
             </li>
           </ul>
@@ -124,6 +161,26 @@ export default function Navbar() {
                 <ul className="dropdown-menu dropdown-menu-end">
                   <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
                   <li><Link className="dropdown-item" to="/favorites">Favorite Listings</Link></li>
+                  <li style={{ position: 'relative' }}>
+                    <Link className="dropdown-item" to="/inbox">
+                      Inbox
+                      {hasUnreadMessages && (
+                        <span
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            right: '10px',
+                            transform: 'translateY(-50%)',
+                            width: '8px',
+                            height: '8px',
+                            backgroundColor: 'red',
+                            borderRadius: '50%',
+                            display: 'inline-block',
+                          }}
+                        />
+                      )}
+                    </Link>
+                  </li>
                   <li><hr className="dropdown-divider" /></li>
                   <li>
                     <button className="dropdown-item text-danger" onClick={handleLogout}>
@@ -179,7 +236,7 @@ export default function Navbar() {
       {showForgotPasswordModal && (
         <ForgotPasswordModal
           show={showForgotPasswordModal}
-          onClose={closeModal}
+          onClose={closeModal} // Fixed typo: `onbirisiClose` to `onClose`
           onBackToSignIn={() => {
             closeModal();
             setShowSignInModal(true);

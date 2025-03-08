@@ -15,7 +15,7 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Multer configuration for file uploads
+// Multer configuration (unchanged)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'public/uploads/');
@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage }).array('images', 10);
 
-// Middleware to authenticate JWT token
+// Authentication middleware (unchanged)
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -39,13 +39,25 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// **GET /api/properties** - Fetch all properties
+// **GET /api/properties** - Fetch all properties with optional type filter
 router.get('/', async (req, res) => {
+  const { type } = req.query;
   try {
-    const result = await pool.query(
-      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped FROM properties'
-    );
-    console.log('Query result:', result.rows); // Debug log
+    let query = `
+      SELECT id, title, price, location, type, bedrooms, bathrooms, etage, 
+             square_footage, description, features, status, lat, long, 
+             images_path, equipe AS equipped, user_id AS agent_id 
+      FROM properties
+    `;
+    const values = [];
+
+    if (type) {
+      query += ' WHERE type = $1';
+      values.push(type);
+    }
+
+    const result = await pool.query(query, values);
+    console.log('Query result:', result.rows);
     res.json(result.rows);
   } catch (err) {
     console.error('Error fetching properties:', err);
@@ -53,16 +65,16 @@ router.get('/', async (req, res) => {
   }
 });
 
-// **GET /api/properties/:id** - Fetch a single property by ID
+// **GET /api/properties/:id** - Fetch a single property
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped FROM properties WHERE id = $1',
+      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id FROM properties WHERE id = $1',
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Property not found' });
-    console.log('Fetched property:', result.rows[0]); // Debug log
+    console.log('Fetched property:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error fetching property:', err);
@@ -70,17 +82,18 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// **POST /api/properties** - Create a new property
+// **POST /api/properties** - Add a new property
 router.post('/', authenticateToken, upload, async (req, res) => {
-  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, equipped } = req.body;
+  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, equipped, agent_id } = req.body;
   const images_path = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
-    const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false; // Default to false if not 'true' or 'false'
+    const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false;
+    const parsedAgentId = agent_id ? parseInt(agent_id) : null; // Parse agent_id or set to null if not provided
 
     const result = await pool.query(
-      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped',
+      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id',
       [
         title,
         parseInt(price),
@@ -97,20 +110,24 @@ router.post('/', authenticateToken, upload, async (req, res) => {
         long ? parseFloat(long) : null,
         JSON.stringify(images_path),
         parsedEquipped,
+        parsedAgentId, // Add agent_id here
       ]
     );
-    console.log('Inserted property:', result.rows[0]); // Debug log
+    console.log('Inserted property:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Error adding property:', err);
+    if (err.code === '23503') { // Foreign key violation
+      return res.status(400).json({ error: 'Invalid agent ID: agent does not exist' });
+    }
     res.status(500).json({ error: err.message });
   }
 });
 
-// **PUT /api/properties/:id** - Update an existing property
+// **PUT /api/properties/:id** - Update a property
 router.put('/:id', authenticateToken, upload, async (req, res) => {
   const { id } = req.params;
-  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipped } = req.body;
+  const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipped, agent_id } = req.body;
 
   let existingImages = [];
   try {
@@ -122,13 +139,14 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
 
   const newImages = req.files && req.files.length > 0 ? req.files.map(file => `/uploads/${file.filename}`) : [];
   const updatedImagesPath = [...existingImages, ...newImages];
-  const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false; // Default to false if not 'true' or 'false'
+  const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false;
+  const parsedAgentId = agent_id ? parseInt(agent_id) : null; // Parse agent_id or set to null if not provided
 
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
 
     const result = await pool.query(
-      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, etage = $7, square_footage = $8, description = $9, features = $10, status = $11, lat = $12, long = $13, images_path = $14, equipe = $15 WHERE id = $16 RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped',
+      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, etage = $7, square_footage = $8, description = $9, features = $10, status = $11, lat = $12, long = $13, images_path = $14, equipe = $15, user_id = $16 WHERE id = $17 RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id',
       [
         title,
         parseInt(price),
@@ -145,19 +163,23 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
         long ? parseFloat(long) : null,
         JSON.stringify(updatedImagesPath),
         parsedEquipped,
+        parsedAgentId, // Add agent_id here
         id,
       ]
     );
     if (result.rowCount === 0) return res.status(404).json({ error: 'Property not found' });
-    console.log('Updated property:', result.rows[0]); // Debug log
+    console.log('Updated property:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating property:', err);
+    if (err.code === '23503') { // Foreign key violation
+      return res.status(400).json({ error: 'Invalid agent ID: agent does not exist' });
+    }
     res.status(500).json({ error: err.message });
   }
 });
 
-// **DELETE /api/properties/:id** - Delete a property
+// **DELETE /api/properties/:id** - Delete a property (unchanged)
 router.delete('/:id', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
@@ -165,7 +187,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (result.rowCount === 0) {
       return res.status(404).json({ message: 'Property not found' });
     }
-    res.status(204).send(); // Success, no content
+    res.status(204).send();
   } catch (err) {
     console.error('Error deleting property:', err);
     res.status(500).json({ error: err.message });

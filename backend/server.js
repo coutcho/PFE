@@ -11,6 +11,7 @@ import FacebookStrategy from "passport-facebook";
 import GoogleStrategy from "passport-google-oauth20";
 import propertiesRoutes from './propertiesRoutes.js';
 import usersRoutes from './usersRoutes.js';
+import inquiriesRoutes from './inquiriesRoutes.js';
 
 const app = express();
 const port = 3001;
@@ -357,7 +358,7 @@ app.post("/api/reset-password", async (req, res) => {
 // Mount the routes
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/users', usersRoutes);
-
+app.use('/api/inquiries', inquiriesRoutes);
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

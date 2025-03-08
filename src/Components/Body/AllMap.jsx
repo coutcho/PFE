@@ -2,8 +2,9 @@ import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { useNavigate } from 'react-router-dom'; // Add this if using react-router-dom
 
-// Define icons
+// Define icons (unchanged)
 const defaultIcon = L.icon({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -23,7 +24,7 @@ const selectedIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-// Component to update map view
+// MapUpdater component (unchanged)
 function MapUpdater({ center, zoom }) {
   const map = useMap();
 
@@ -35,15 +36,13 @@ function MapUpdater({ center, zoom }) {
 }
 
 const AllMap = ({ properties, selectedProperty }) => {
-  // Default center (NYC)
+  const navigate = useNavigate(); // Add this if using react-router-dom
   const defaultCenter = [40.7128, -74.0060];
 
-  // Filter properties with valid lat/long
   const validProperties = properties.filter(
     (property) => property.lat != null && property.long != null
   );
 
-  // Determine center: selected property if valid, first valid property, or default
   const center = selectedProperty && selectedProperty.lat != null && selectedProperty.long != null
     ? [selectedProperty.lat, selectedProperty.long]
     : validProperties.length > 0
@@ -51,6 +50,11 @@ const AllMap = ({ properties, selectedProperty }) => {
     : defaultCenter;
 
   const zoom = selectedProperty && selectedProperty.lat != null && selectedProperty.long != null ? 15 : 13;
+
+  const handleImageClick = (id) => {
+    // Assuming your listing route is something like /properties/:id
+    navigate(`/listing/${id}`);
+  };
 
   return (
     <MapContainer
@@ -78,7 +82,13 @@ const AllMap = ({ properties, selectedProperty }) => {
                     : 'https://via.placeholder.com/200x150'
                 }
                 alt={property.title || 'Property Image'}
-                style={{ width: '200px', height: '150px', objectFit: 'cover' }}
+                style={{ 
+                  width: '200px', 
+                  height: '150px', 
+                  objectFit: 'cover',
+                  cursor: 'pointer' // Add cursor pointer to indicate clickability
+                }}
+                onClick={() => handleImageClick(property.id)}
               />
               <h6 className="mt-2">{property.price.toLocaleString()} DA</h6>
               <p className="mb-0">{property.location}</p>

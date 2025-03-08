@@ -8,7 +8,7 @@ function Users() {
   const [error, setError] = useState(null);
 
   const API_BASE_URL = 'http://localhost:3001/api/users';
-  const token = localStorage.getItem('authToken'); // Matches SignInModal
+  const token = localStorage.getItem('authToken');
 
   // Fetch users on mount
   useEffect(() => {
@@ -32,7 +32,7 @@ function Users() {
           throw new Error('Failed to fetch users');
         }
         const data = await response.json();
-        const filteredUsers = data.filter(user => user.role === 'admin' || user.role === 'chauffeur');
+        const filteredUsers = data.filter(user => ['admin', 'chauffeur', 'agent'].includes(user.role));
         setUsers(filteredUsers);
       } catch (err) {
         setError(err.message);
@@ -57,7 +57,7 @@ function Users() {
       role: formData.get('role'),
       phone: formData.get('phone'),
       joinDate: formData.get('joinDate') || new Date().toISOString().split('T')[0],
-      password: editingUser ? undefined : formData.get('password'), // Only send password for new users
+      password: formData.get('password'), // Send password for both add and edit (optional for edit)
     };
 
     try {
@@ -98,7 +98,7 @@ function Users() {
         setUsers(users.map(u => (u.id === editingUser.id ? savedUser : u)));
         setEditingUser(null);
       } else {
-        if (savedUser.role === 'admin' || savedUser.role === 'chauffeur') {
+        if (['admin', 'chauffeur', 'agent'].includes(savedUser.role)) {
           setUsers([...users, savedUser]);
         }
       }
@@ -140,6 +140,19 @@ function Users() {
     }
   };
 
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin':
+        return 'danger';
+      case 'chauffeur':
+        return 'primary';
+      case 'agent':
+        return 'success';
+      default:
+        return 'secondary';
+    }
+  };
+
   if (!token) return <div>Please sign in as an admin to manage users.</div>;
   if (loading) return <div>Loading users...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -178,18 +191,18 @@ function Users() {
                     required
                   />
                 </div>
-                {!editingUser && (
-                  <div className="mb-3">
-                    <label htmlFor="password" className="form-label">Password</label>
-                    <input
-                      type="password"
-                      className="form-control"
-                      id="password"
-                      name="password"
-                      required
-                    />
-                  </div>
-                )}
+                <div className="mb-3">
+                  <label htmlFor="password" className="form-label">
+                    {editingUser ? 'New Password (optional)' : 'Password'}
+                  </label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    id="password"
+                    name="password"
+                    required={!editingUser} // Required only for new users
+                  />
+                </div>
                 <div className="mb-3">
                   <label htmlFor="phone" className="form-label">Phone Number</label>
                   <input
@@ -213,6 +226,7 @@ function Users() {
                     <option value="">Select role...</option>
                     <option value="admin">Admin</option>
                     <option value="chauffeur">Chauffeur</option>
+                    <option value="agent">Agent</option>
                   </select>
                 </div>
                 <div className="mb-3">
@@ -266,9 +280,7 @@ function Users() {
                         <td>{user.email}</td>
                         <td>
                           <span
-                            className={`badge bg-${
-                              user.role === 'admin' ? 'danger' : 'primary'
-                            }`}
+                            className={`badge bg-${getRoleBadgeColor(user.role)}`}
                           >
                             {user.role}
                           </span>

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom'; // Add this to read query params
 import 'bootstrap/dist/css/bootstrap.min.css';
-import Stacked from './Stacked'; // Updated path
-import AllMap from './AllMap'; // Updated path
+import Stacked from './Stacked';
+import AllMap from './AllMap';
 import SearchBar from '../Navbar/Searchbar';
 
 function AllListings() {
@@ -9,11 +10,21 @@ function AllListings() {
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const location = useLocation(); // Add this to access query params
 
   useEffect(() => {
     const fetchProperties = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/properties');
+        // Get query parameters from URL
+        const queryParams = new URLSearchParams(location.search);
+        const typeFilter = queryParams.get('type');
+
+        // Build the API URL with optional type filter
+        const url = typeFilter 
+          ? `http://localhost:3001/api/properties?type=${typeFilter}`
+          : 'http://localhost:3001/api/properties';
+
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -28,7 +39,7 @@ function AllListings() {
       }
     };
     fetchProperties();
-  }, []);
+  }, [location.search]); // Re-run effect when query params change
 
   return (
     <div className="container-fluid">

@@ -11,12 +11,15 @@ function Properties() {
   const [error, setError] = useState(null);
   const [previewUrls, setPreviewUrls] = useState([]);
   const [propertyType, setPropertyType] = useState('');
-  const [isEquipped, setIsEquipped] = useState(false); // State for toggle
+  const [isEquipped, setIsEquipped] = useState(false);
+  const [agents, setAgents] = useState([]);
+  const [selectedAgentId, setSelectedAgentId] = useState(''); // New state for agent dropdown
   const fileInputRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:3001/api/properties';
+  const USERS_API_URL = 'http://localhost:3001/api/users';
   const token = localStorage.getItem('authToken');
-  const baseUrl = 'http://localhost:3001'; // Base URL for your backend
+  const baseUrl = 'http://localhost:3001';
 
   // Fetch Properties on Mount
   useEffect(() => {
@@ -47,6 +50,31 @@ function Properties() {
     fetchProperties();
   }, [token]);
 
+  // Fetch Agents (users with role "agent") on Mount
+  useEffect(() => {
+    const fetchAgents = async () => {
+      if (!token) return;
+      try {
+        const response = await fetch(USERS_API_URL, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication failed. Please sign in again.');
+          }
+          throw new Error('Failed to fetch agents');
+        }
+        const data = await response.json();
+        const agentList = data.filter(user => user.role === 'agent');
+        setAgents(agentList);
+      } catch (err) {
+        console.error('Error fetching agents:', err);
+        setError(err.message);
+      }
+    };
+    fetchAgents();
+  }, [token]);
+
   // Cleanup Preview URLs
   useEffect(() => {
     return () => {
@@ -54,10 +82,17 @@ function Properties() {
     };
   }, [previewUrls]);
 
-  // Sync propertyType and isEquipped with editingProperty
+  // Sync propertyType, isEquipped, and selectedAgentId with editingProperty
   useEffect(() => {
-    setPropertyType(editingProperty?.type || '');
-    setIsEquipped(editingProperty?.equipped || false); // Sync equipped state
+    if (editingProperty) {
+      setPropertyType(editingProperty.type || '');
+      setIsEquipped(editingProperty.equipped || false);
+      setSelectedAgentId(editingProperty.agent_id ? editingProperty.agent_id.toString() : ''); // Sync agent_id
+    } else {
+      setPropertyType('');
+      setIsEquipped(false);
+      setSelectedAgentId(''); // Reset when not editing
+    }
   }, [editingProperty]);
 
   // Handle Edit Button
@@ -68,12 +103,11 @@ function Properties() {
     setSelectedImages([]);
     setPreviewUrls([]);
     setFeatureInput('');
-    setIsEquipped(property.equipped || false); // Set equipped state
 
     if (property.images_path && Array.isArray(property.images_path)) {
       const existingImagePreviews = property.images_path.map((img, index) => ({
         id: `existing-${index}`,
-        url: `${baseUrl}${img}`, // Prepend base URL to the image path
+        url: `${baseUrl}${img}`,
         isExisting: true,
         name: `Image ${index + 1}`
       }));
@@ -141,6 +175,9 @@ function Properties() {
 
     formData.append('location', e.target.location.value);
     formData.append('type', propertyType);
+    
+    // Add agent_id to form data
+    formData.append('agent_id', selectedAgentId); // Use controlled state value
 
     const bedroomsValue = e.target.bedrooms.value;
     const parsedBedrooms = parseInt(bedroomsValue);
@@ -182,13 +219,13 @@ function Properties() {
 
     formData.append('description', e.target.description.value);
     formData.append('features', JSON.stringify(features));
-    formData.append('equipped', isEquipped); // Add equipped to form data
+    formData.append('equipped', isEquipped);
 
     if (editingProperty) {
       formData.append('status', e.target.status.value);
       const keptExistingImages = previewUrls
         .filter(img => img.isExisting)
-        .map(img => img.url.replace(baseUrl, '')); // Remove base URL to store relative path
+        .map(img => img.url.replace(baseUrl, ''));
       formData.append('images_path', JSON.stringify(keptExistingImages));
     } else {
       formData.append('status', 'Active');
@@ -258,7 +295,8 @@ function Properties() {
       setSelectedImages([]);
       setFeatureInput('');
       setPropertyType('');
-      setIsEquipped(false); // Reset equipped state
+      setIsEquipped(false);
+      setSelectedAgentId(''); // Reset agent selection
       previewUrls.forEach(preview => {
         if (!preview.isExisting) {
           URL.revokeObjectURL(preview.url);
@@ -295,6 +333,13 @@ function Properties() {
         setError(err.message);
       }
     }
+  };
+
+  // Get Agent Name from ID
+  const getAgentName = (agentId) => {
+    if (!agentId) return 'No Agent';
+    const agent = agents.find(a => a.id === agentId);
+    return agent ? agent.name : 'Unknown Agent';
   };
 
   // Render
@@ -359,9 +404,27 @@ function Properties() {
                     required
                   >
                     <option value="">Select type...</option>
-                    <option value="apartement">Apartement</option>
+                    <option value="appartement">Appartement</option>
                     <option value="villa">Villa</option>
                     <option value="bureau">Bureau</option>
+                  </select>
+                </div>
+                {/* Agent Selection Dropdown */}
+                <div className="mb-3">
+                  <label htmlFor="agent" className="form-label">Assigned Agent</label>
+                  <select
+                    className="form-select"
+                    id="agent"
+                    name="agent"
+                    value={selectedAgentId} // Controlled value
+                    onChange={(e) => setSelectedAgentId(e.target.value)} // Update state on change
+                  >
+                    <option value="">No Agent</option>
+                    {agents.map(agent => (
+                      <option key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 {/* Bootstrap Switch Toggle for Equipped Status */}
@@ -379,7 +442,7 @@ function Properties() {
                 </div>
                 <div className="row mb-3">
                   <div className="col">
-                    <label htmlFor="bedrooms" className="form-label">Bedrooms</label>
+                    <label htmlFor="bedrooms" className="form-label"> Bedrooms</label>
                     <input
                       type="number"
                       step="1"
@@ -575,7 +638,8 @@ function Properties() {
                         setSelectedImages([]);
                         setFeatureInput('');
                         setPropertyType('');
-                        setIsEquipped(false); // Reset equipped state
+                        setIsEquipped(false);
+                        setSelectedAgentId('');
                         previewUrls.forEach(preview => {
                           if (!preview.isExisting) {
                             URL.revokeObjectURL(preview.url);
@@ -607,6 +671,7 @@ function Properties() {
                       <th>Status</th>
                       <th>Type</th>
                       <th>Equipped</th>
+                      <th>Agent</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
@@ -640,6 +705,9 @@ function Properties() {
                         </td>
                         <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
                           {property.equipped ? 'Yes' : 'No'}
+                        </td>
+                        <td style={{ textDecoration: property.status === 'Sold' ? 'line-through' : 'none' }}>
+                          {getAgentName(property.agent_id)}
                         </td>
                         <td>
                           <button

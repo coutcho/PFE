@@ -4,11 +4,12 @@ import { jwtDecode } from "jwt-decode";
 import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
 import AuthCallback from './Components/Navbar/AuthCallback';
+import Chat from './Components/Chat/Chat'; // Add this import
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import PropertyListings from './Components/Body/PropertyListings';
-import AllListings from './Components/Body/AllListings'; // Add this import
+import AllListings from './Components/Body/AllListings';
 import Footer from './Components/Footer/Footer';
 import ListingPage from './Components/ListingPage/ListingPage';
 import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
@@ -82,6 +83,16 @@ export default function App() {
           element={
             <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
               <ListingPage />
+            </Layout>
+          }
+        />
+        {/* Inbox Route */}
+        <Route
+          path="/inbox"
+          element={
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <Chat />
+              <Footer />
             </Layout>
           }
         />

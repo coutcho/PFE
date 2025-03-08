@@ -1,0 +1,27 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+.sidebar {
+  border-right: 1px solid #dee2e6;
+  height: calc(100vh - 56px);
+}
+
+.messages-container {
+  height: calc(100vh - 56px);
+}
+
+.navbar-custom {
+  background-color: white;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.btn-orange {
+  background-color: #ff6b2b;
+  border-color: #ff6b2b;
+  color: white;
+}
+
+.btn-orange:hover {
+  background-color: #ff5a1f;
+  border-color: #ff5a1f;
+  color: white;
+}

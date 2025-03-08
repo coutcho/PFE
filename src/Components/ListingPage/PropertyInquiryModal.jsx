@@ -1,24 +1,38 @@
-// src/Components/ListingPage/PropertyInquiryModal.jsx
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import './ListingCSS.css';
 
-function PropertyInquiryModal({ show, onClose, property }) {
+function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     phone: '',
-    message: 'Hi, I would like to know more about this listing.'
+    message: 'Hi, I would like to know more about this listing.',
   });
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [avecVTC, setAvecVTC] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(false);
+  
+  // Create a ref for the modal content
+  const modalContentRef = useRef(null);
+
+  const token = localStorage.getItem('authToken');
+  const API_INQUIRIES_URL = 'http://localhost:3001/api/inquiries';
+
+  // Effect to scroll to top when success state changes to true
+  useEffect(() => {
+    if (success && modalContentRef.current) {
+      modalContentRef.current.scrollTop = 0;
+    }
+  }, [success]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -30,7 +44,7 @@ function PropertyInquiryModal({ show, onClose, property }) {
     { time: '1:00 PM', label: 'Afternoon - 1:00 PM' },
     { time: '2:00 PM', label: 'Afternoon - 2:00 PM' },
     { time: '3:00 PM', label: 'Afternoon - 3:00 PM' },
-    { time: '4:00 PM', label: 'Afternoon - 4:00 PM' }
+    { time: '4:00 PM', label: 'Afternoon - 4:00 PM' },
   ];
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
@@ -39,18 +53,86 @@ function PropertyInquiryModal({ show, onClose, property }) {
       date,
       formatted: format(date, 'MMM d'),
       day: format(date, 'EEE'),
-      fullDate: format(date, 'EEEE, MMMM d, yyyy')
+      fullDate: format(date, 'EEEE, MMMM d, yyyy'),
     };
   });
 
-  const handleSubmit = () => {
-    console.log({
-      ...formData,
-      selectedDate: selectedDate ? format(selectedDate, 'MMM d, yyyy') : null,
-      selectedTime,
-      avecVTC
-    });
-    onClose();
+  const handleDateClick = (date) => {
+    setSelectedDate(selectedDate && format(selectedDate, 'MMM d') === format(date, 'MMM d') ? null : date);
+  };
+
+  const handleTimeClick = (time) => {
+    setSelectedTime(selectedTime === time ? null : time);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.fullName || !formData.email) {
+      setError('Full Name and Email are required.');
+      if (modalContentRef.current) {
+        modalContentRef.current.scrollTop = 0;
+      }
+      return;
+    }
+
+    // Construct the message with tour request details (if any)
+    let finalMessage = formData.message;
+    if (selectedDate && selectedTime) {
+      const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
+      finalMessage += `\n\nTour Request: I would like to schedule a tour on ${formattedDate} at ${selectedTime}.`;
+    } else if (selectedDate) {
+      const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
+      finalMessage += `\n\nTour Request: I would like to schedule a tour on ${formattedDate}.`;
+    }
+
+    const inquiryData = {
+      property_id: property?.id,
+      agent_id: property?.agent_id || null,
+      full_name: formData.fullName,
+      email: formData.email,
+      phone: formData.phone || null,
+      message: finalMessage, // Use the modified message with tour details
+      tour_date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
+      tour_time: selectedTime || null,
+      avec_vtc: avecVTC,
+    };
+
+    try {
+      const response = await fetch(API_INQUIRIES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(inquiryData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to send inquiry: ${errorText}`);
+      }
+
+      setSuccess(true);
+      setError(null);
+      
+      if (modalContentRef.current) {
+        modalContentRef.current.scrollTop = 0;
+      }
+      
+      setTimeout(() => {
+        if (onInquirySubmitted) {
+          onInquirySubmitted();
+        } else {
+          onClose();
+        }
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+      setSuccess(false);
+      console.error('Error submitting inquiry:', err);
+      if (modalContentRef.current) {
+        modalContentRef.current.scrollTop = 0;
+      }
+    }
   };
 
   if (!show) return null;
@@ -58,7 +140,7 @@ function PropertyInquiryModal({ show, onClose, property }) {
   return (
     <div className="modal show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
       <div className="modal-dialog modal-dialog-centered">
-        <div className="modal-content scrollable-content">
+        <div className="modal-content scrollable-content" ref={modalContentRef}>
           <div className="modal-header bg-light">
             <div>
               <h5 className="modal-title">{property?.title || 'Property Title'}</h5>
@@ -68,6 +150,18 @@ function PropertyInquiryModal({ show, onClose, property }) {
           </div>
 
           <div className="modal-body">
+            {/* Success/Error Messages */}
+            {success && (
+              <div className="alert alert-success" role="alert">
+                Inquiry sent successfully!
+              </div>
+            )}
+            {error && (
+              <div className="alert alert-danger" role="alert">
+                {error}
+              </div>
+            )}
+
             {/* Contact Information */}
             <div className="row mb-4">
               <div className="col-md-12">
@@ -134,7 +228,10 @@ function PropertyInquiryModal({ show, onClose, property }) {
                       className={`btn btn-outline-primary position-relative ${
                         selectedDate && format(selectedDate, 'MMM d') === formatted ? 'active' : ''
                       }`}
-                      onClick={() => setSelectedDate(date)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDateClick(date);
+                      }}
                       title={fullDate}
                     >
                       <small className="d-block text-muted">{day}</small>
@@ -151,7 +248,10 @@ function PropertyInquiryModal({ show, onClose, property }) {
                     <div className="col-md-3" key={time}>
                       <button
                         className={`btn btn-outline-primary w-100 ${selectedTime === time ? 'active' : ''}`}
-                        onClick={() => setSelectedTime(time)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleTimeClick(time);
+                        }}
                       >
                         {time}
                       </button>
@@ -182,7 +282,10 @@ function PropertyInquiryModal({ show, onClose, property }) {
             <button
               className="btn btn-warning w-100"
               style={{ backgroundColor: '#fd7e14' }}
-              onClick={handleSubmit}
+              onClick={(e) => {
+                e.preventDefault();
+                handleSubmit();
+              }}
             >
               {avecVTC ? 'Send Message / Checkout' : 'Send a Message'}
             </button>
