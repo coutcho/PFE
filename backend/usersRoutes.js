@@ -58,7 +58,7 @@ router.get('/', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Get all agents (public access for any authenticated user)
+// Get all agents (still requires authentication for now)
 router.get('/agents', authenticateUser, async (req, res) => {
   try {
     const result = await pool.query(
@@ -72,8 +72,8 @@ router.get('/agents', authenticateUser, async (req, res) => {
   }
 });
 
-// Get a specific agent by ID (public access for any authenticated user)
-router.get('/agents/:id', authenticateUser, async (req, res) => {
+// Get a specific agent by ID (now publicly accessible)
+router.get('/agents/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -92,7 +92,7 @@ router.get('/agents/:id', authenticateUser, async (req, res) => {
   }
 });
 
-// Get current user info (public access for any authenticated user)
+// Get current user info (requires authentication)
 router.get('/me', authenticateUser, async (req, res) => {
   try {
     const result = await pool.query(
@@ -111,7 +111,7 @@ router.get('/me', authenticateUser, async (req, res) => {
   }
 });
 
-// Add a new user
+// Add a new user (admin only)
 router.post('/', authenticateAdmin, async (req, res) => {
   const { name, email, role, phone, joinDate, password } = req.body;
   
@@ -146,7 +146,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Update a user
+// Update a user (admin only)
 router.put('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   const { name, email, role, phone, joinDate, password } = req.body;
@@ -235,7 +235,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
   }
 });
 
-// Delete a user
+// Delete a user (admin only)
 router.delete('/:id', authenticateAdmin, async (req, res) => {
   const { id } = req.params;
   try {

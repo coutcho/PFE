@@ -1,5 +1,7 @@
+// In Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import io from 'socket.io-client';
 import "./Navbar.css";
 import SignInModal from "./SignInModal";
 import SignUpModal from "./SignUpModal";
@@ -15,6 +17,8 @@ export default function Navbar() {
   const navigate = useNavigate();
   const token = localStorage.getItem("authToken");
   const API_INQUIRIES_URL = "http://localhost:3001/api/inquiries";
+  const API_USERS_URL = "http://localhost:3001/api/users";
+  const socket = io('http://localhost:3001');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,8 +48,24 @@ export default function Navbar() {
     };
 
     checkUnreadMessages();
-    const interval = setInterval(checkUnreadMessages, 30000); // Check every 30 seconds
-    return () => clearInterval(interval);
+
+    if (token) {
+      fetch(`${API_USERS_URL}/me`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+        .then(res => res.json())
+        .then(userData => {
+          socket.emit('join', userData.id);
+          socket.on('newMessage', () => {
+            checkUnreadMessages();
+          });
+        });
+    }
+
+    return () => {
+      socket.off('newMessage');
+      socket.disconnect();
+    };
   }, [token]);
 
   const closeModal = () => {
@@ -57,6 +77,9 @@ export default function Navbar() {
   const handleSignInSuccess = () => {
     setIsSignedIn(true);
     closeModal();
+    // Emit a custom event to notify other components of login
+    window.dispatchEvent(new Event('loginSuccess'));
+    console.log('Login successful, event dispatched');
   };
 
   const handleLogout = async () => {
@@ -73,7 +96,7 @@ export default function Navbar() {
       }
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
-      setHasUnreadMessages(false); // Reset unread status on logout
+      setHasUnreadMessages(false);
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
@@ -236,7 +259,7 @@ export default function Navbar() {
       {showForgotPasswordModal && (
         <ForgotPasswordModal
           show={showForgotPasswordModal}
-          onClose={closeModal} // Fixed typo: `onbirisiClose` to `onClose`
+          onClose={closeModal}
           onBackToSignIn={() => {
             closeModal();
             setShowSignInModal(true);

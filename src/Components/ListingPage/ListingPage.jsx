@@ -1,4 +1,3 @@
-// src/Components/ListingPage/ListingPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import PropertyGallery from './PropertyGallery';
@@ -13,6 +12,7 @@ function ListingPage() {
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [refreshAgentTrigger, setRefreshAgentTrigger] = useState(0);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -32,6 +32,19 @@ function ListingPage() {
     fetchProperty();
   }, [id]);
 
+  // Listen for a global login event (emitted by Navbar after successful login)
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      console.log('Login success event received in ListingPage');
+      setRefreshAgentTrigger(prev => prev + 1); // Trigger ContactAgent to re-fetch agent data
+    };
+
+    window.addEventListener('loginSuccess', handleLoginSuccess);
+    return () => {
+      window.removeEventListener('loginSuccess', handleLoginSuccess);
+    };
+  }, []);
+
   if (loading) return <div className="min-vh-100 bg-light">Loading...</div>;
   if (error) return <div className="min-vh-100 bg-light">Error: {error}</div>;
   if (!property) return <div className="min-vh-100 bg-light">Property not found</div>;
@@ -49,7 +62,10 @@ function ListingPage() {
                 <PropertyMap location={{ lat: property.lat, lng: property.long }} address={property.location} />
               </div>
               <div className="col-lg-4">
-                <ContactAgent property={property} />
+                <ContactAgent 
+                  property={property} 
+                  refreshAgent={refreshAgentTrigger} // Pass the trigger as a prop
+                />
               </div>
             </div>
           </div>
