@@ -3,12 +3,8 @@ import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler, FaBuilding, FaChair } from 'react-icons/fa';
 
 const PropertyCard = ({ property }) => {
-  // Log the property prop to debug
-  console.log('PropertyCard received property:', property);
-
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // Guard clause for undefined property
   if (!property) {
     return <div>Loading property...</div>;
   }
@@ -21,6 +17,12 @@ const PropertyCard = ({ property }) => {
   const imageSrc = property.images_path && Array.isArray(property.images_path) && property.images_path.length > 0 
     ? `http://localhost:3001/${property.images_path[0]}` 
     : 'https://via.placeholder.com/800';
+
+  // Function to convert string to title case (capitalize first letter of each word)
+  const toTitleCase = (str) => {
+    if (!str) return '';
+    return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
 
   return (
     <motion.div
@@ -49,9 +51,13 @@ const PropertyCard = ({ property }) => {
         </button>
       </div>
       <div className="card-body">
-        <h5 className="card-title fw-bold">
+        {/* Title with only the first letter of each word capitalized */}
+        <h5 className="card-title">{toTitleCase(property.title) || 'Untitled Property'}</h5>
+        {/* Price: blue, slightly bigger, aligned to the left, and now bold */}
+        <h5 className="mb-2" style={{ color: '#007bff', fontSize: '1.4rem', fontWeight: 'bold' }}>
           {(typeof property.price === 'number' ? property.price : 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
         </h5>
+        {/* Property Details */}
         <div className="d-flex gap-3 mb-2">
           <span>
             <FaBed className="me-1" /> {property.bedrooms || 0} chambre

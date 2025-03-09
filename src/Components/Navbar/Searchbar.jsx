@@ -1,23 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // Add this import
+import { useNavigate } from 'react-router-dom';
 import './SearchBar.css';
-import FilterSidebar from './FilterSideBar';
+import FilterSidebar from './FilterSidebar';
 
-export default function SearchBar() {
+export default function SearchBar({ onApplyFilters }) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchInput, setSearchInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef(null);
-  const navigate = useNavigate(); // Hook for navigation
+  const navigate = useNavigate();
 
-  // Toggle filter sidebar visibility
   const toggleFilter = () => {
     setIsFilterOpen(!isFilterOpen);
   };
 
-  // Handle input changes and fetch suggestions from Nominatim API
   const handleInputChange = async (e) => {
     const value = e.target.value;
     setSearchInput(value);
@@ -39,20 +37,21 @@ export default function SearchBar() {
     }
   };
 
-  // Handle suggestion selection
   const handleSuggestionClick = (suggestion) => {
-    setSearchInput(suggestion.display_name);
+    const locationQuery = suggestion.display_name; // Use full display_name for word-based matching
+    setSearchInput(locationQuery);
     setShowSuggestions(false);
-    // Optionally navigate with search data (not required for this task)
-    navigate('/listings'); // Navigate even with suggestion
+    navigate(`/listings?location=${encodeURIComponent(locationQuery)}`);
   };
 
-  // Handle search button click
   const handleSearchClick = () => {
-    navigate('/listings'); // Navigate to AllListings page
+    if (searchInput.trim() === '') {
+      navigate('/listings'); // No query parameters, show all listings
+    } else {
+      navigate(`/listings?location=${encodeURIComponent(searchInput)}`);
+    }
   };
 
-  // Hide suggestions when clicking outside
   const handleClickOutside = (event) => {
     if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
       setShowSuggestions(false);
@@ -68,7 +67,6 @@ export default function SearchBar() {
 
   return (
     <div className="search-bar-container w-50 position-relative">
-      {/* Input Group */}
       <div className="input-group shadow d-flex gap-2 position-relative">
         <input
           type="text"
@@ -81,8 +79,8 @@ export default function SearchBar() {
         />
         <button
           className="btn btn-primary btn-md rounded"
-          type="button" // Change to button to prevent form submission
-          onClick={handleSearchClick} // Add onClick handler
+          type="button"
+          onClick={handleSearchClick}
         >
           Rechercher
         </button>
@@ -90,7 +88,6 @@ export default function SearchBar() {
           <Filter className="w-5 h-5" />
         </button>
 
-        {/* Suggestions Dropdown */}
         {showSuggestions && suggestions.length > 0 && (
           <ul
             ref={suggestionsRef}
@@ -111,15 +108,17 @@ export default function SearchBar() {
         )}
       </div>
 
-      {/* Filter Sidebar */}
       <div
         className={`filter-sidebar bg-dark text-white ${isFilterOpen ? 'open' : ''}`}
         style={{ minWidth: '0px', zIndex: 1000 }}
       >
-        <FilterSidebar onClose={() => setIsFilterOpen(false)} />
+        <FilterSidebar
+          onApplyFilters={onApplyFilters}
+          onClose={() => setIsFilterOpen(false)}
+          selectedLocation={searchInput}
+        />
       </div>
 
-      {/* Overlay to Close Sidebar */}
       {isFilterOpen && (
         <div
           className="filter-overlay"

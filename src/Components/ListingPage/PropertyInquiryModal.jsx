@@ -7,7 +7,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
     fullName: '',
     email: '',
     phone: '',
-    message: 'Hi, I would like to know more about this listing.',
+    message: 'Bonjour, je souhaiterais avoir plus d\'informations sur cette annonce.',
   });
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
@@ -37,14 +37,14 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
   };
 
   const timeSlots = [
-    { time: '9:00 AM', label: 'Morning - 9:00 AM' },
-    { time: '10:00 AM', label: 'Morning - 10:00 AM' },
-    { time: '11:00 AM', label: 'Morning - 11:00 AM' },
-    { time: '12:00 PM', label: 'Afternoon - 12:00 PM' },
-    { time: '1:00 PM', label: 'Afternoon - 1:00 PM' },
-    { time: '2:00 PM', label: 'Afternoon - 2:00 PM' },
-    { time: '3:00 PM', label: 'Afternoon - 3:00 PM' },
-    { time: '4:00 PM', label: 'Afternoon - 4:00 PM' },
+    { time: '9:00 AM', label: 'Matin - 9:00' },
+    { time: '10:00 AM', label: 'Matin - 10:00' },
+    { time: '11:00 AM', label: 'Matin - 11:00' },
+    { time: '12:00 PM', label: 'Après-midi - 12:00' },
+    { time: '1:00 PM', label: 'Après-midi - 13:00' },
+    { time: '2:00 PM', label: 'Après-midi - 14:00' },
+    { time: '3:00 PM', label: 'Après-midi - 15:00' },
+    { time: '4:00 PM', label: 'Après-midi - 16:00' },
   ];
 
   const dateOptions = Array.from({ length: 7 }, (_, i) => {
@@ -67,7 +67,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
 
   const handleSubmit = async () => {
     if (!formData.fullName || !formData.email) {
-      setError('Full Name and Email are required.');
+      setError('Nom complet et Email sont obligatoires.');
       if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
       }
@@ -78,10 +78,10 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
     let finalMessage = formData.message;
     if (selectedDate && selectedTime) {
       const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
-      finalMessage += `\n\nTour Request: I would like to schedule a tour on ${formattedDate} at ${selectedTime}.`;
+      finalMessage += `\n\nDemande de visite: J'aimerais planifier une visite le ${formattedDate} à ${selectedTime}.`;
     } else if (selectedDate) {
       const formattedDate = format(selectedDate, 'EEEE, MMMM d, yyyy');
-      finalMessage += `\n\nTour Request: I would like to schedule a tour on ${formattedDate}.`;
+      finalMessage += `\n\nDemande de visite: J'aimerais planifier une visite le ${formattedDate}.`;
     }
 
     const inquiryData = {
@@ -108,7 +108,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to send inquiry: ${errorText}`);
+        throw new Error(`Échec de l'envoi de la demande: ${errorText}`);
       }
 
       setSuccess(true);
@@ -128,7 +128,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
     } catch (err) {
       setError(err.message);
       setSuccess(false);
-      console.error('Error submitting inquiry:', err);
+      console.error('Erreur lors de la soumission de la demande:', err);
       if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
       }
@@ -143,8 +143,8 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
         <div className="modal-content scrollable-content" ref={modalContentRef}>
           <div className="modal-header bg-light">
             <div>
-              <h5 className="modal-title">{property?.title || 'Property Title'}</h5>
-              <small className="text-muted">Schedule a tour or request information</small>
+              <h5 className="modal-title">{property?.title || 'Titre de la propriété'}</h5>
+              <small className="text-muted">Planifier une visite ou demander des informations</small>
             </div>
             <button type="button" className="btn-close" onClick={onClose}></button>
           </div>
@@ -153,7 +153,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
             {/* Success/Error Messages */}
             {success && (
               <div className="alert alert-success" role="alert">
-                Inquiry sent successfully!
+                Demande envoyée avec succès !
               </div>
             )}
             {error && (
@@ -165,48 +165,48 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
             {/* Contact Information */}
             <div className="row mb-4">
               <div className="col-md-12">
-                <h6 className="mb-3">Contact Information</h6>
+                <h6 className="mb-3">Informations de contact</h6>
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">Full Name*</label>
+                <label className="form-label">Nom complet*</label>
                 <input
                   type="text"
                   name="fullName"
                   className="form-control"
                   value={formData.fullName}
                   onChange={handleInputChange}
-                  placeholder="Enter your full name"
+                  placeholder="Entrez votre nom complet"
                   required
                 />
               </div>
               <div className="col-md-6 mb-3">
-                <label className="form-label">Email Address*</label>
+                <label className="form-label">Adresse email*</label>
                 <input
                   type="email"
                   name="email"
                   className="form-control"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="Enter your email"
+                  placeholder="Entrez votre email"
                   required
                 />
               </div>
               <div className="col-md-6">
-                <label className="form-label">Phone Number</label>
+                <label className="form-label">Numéro de téléphone</label>
                 <input
                   type="tel"
                   name="phone"
                   className="form-control"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  placeholder="(123) 456-7890"
+                  placeholder="06 12 34 56 78"
                 />
               </div>
             </div>
 
             {/* Message */}
             <div className="mb-4">
-              <h6 className="mb-3">Your Message</h6>
+              <h6 className="mb-3">Votre message</h6>
               <textarea
                 name="message"
                 className="form-control"
@@ -218,9 +218,9 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
 
             {/* Tour Request */}
             <div className="mb-4">
-              <h6 className="mb-3">Request a Tour (Optional)</h6>
+              <h6 className="mb-3">Demander une visite (Optionnel)</h6>
               <div className="date-selection mb-3">
-                <label className="form-label">Select a Date</label>
+                <label className="form-label">Sélectionnez une date</label>
                 <div className="d-flex flex-wrap gap-2">
                   {dateOptions.map(({ date, formatted, day, fullDate }) => (
                     <button
@@ -242,7 +242,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
               </div>
 
               <div className="time-selection">
-                <label className="form-label">Select a Time</label>
+                <label className="form-label">Sélectionnez une heure</label>
                 <div className="row g-2">
                   {timeSlots.map(({ time, label }) => (
                     <div className="col-md-3" key={time}>
@@ -259,7 +259,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
                   ))}
                 </div>
                 <small className="text-muted d-block mt-2">
-                  ⏰ Times shown are in the listing's local time
+                  ⏰ Les horaires sont indiqués dans le fuseau horaire local
                 </small>
               </div>
             </div>
@@ -287,7 +287,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
                 handleSubmit();
               }}
             >
-              {avecVTC ? 'Send Message / Checkout' : 'Send a Message'}
+              {avecVTC ? 'Envoyer le message / Paiement' : 'Envoyer un message'}
             </button>
           </div>
         </div>

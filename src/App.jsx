@@ -4,7 +4,8 @@ import { jwtDecode } from "jwt-decode";
 import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
 import AuthCallback from './Components/Navbar/AuthCallback';
-import Chat from './Components/Chat/Chat'; // Add this import
+import Chat from './Components/Chat/Chat';
+import Profile from './Components/Navbar/Profile'; // Add this import
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -92,6 +93,16 @@ export default function App() {
           element={
             <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
               <Chat />
+              <Footer />
+            </Layout>
+          }
+        />
+        {/* Profile Route */}
+        <Route
+          path="/profile"
+          element={
+            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+              <Profile />
               <Footer />
             </Layout>
           }

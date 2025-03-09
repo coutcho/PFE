@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Form, Button } from 'react-bootstrap';
-
+import { useNavigate } from 'react-router-dom';
 
 // List of all 58 wilayas in Algeria with their numbers
 const wilayas = [
@@ -64,7 +64,7 @@ const wilayas = [
   { number: 58, name: 'Tamanrasset' },
 ];
 
-function FilterSidebar({ onApplyFilters }) {
+function FilterSidebar({ onApplyFilters, onClose, selectedLocation }) {
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [minSurface, setMinSurface] = useState('');
@@ -75,34 +75,50 @@ function FilterSidebar({ onApplyFilters }) {
   const [propertyType, setPropertyType] = useState('');
   const [engagementType, setEngagementType] = useState('');
   const [isEquipped, setIsEquipped] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const filters = {
       minPrice: parseInt(minPrice, 10) || 0,
-      maxPrice: parseInt(maxPrice, 10) || '',
+      maxPrice: parseInt(maxPrice, 10) || Infinity,
       minSurface: parseInt(minSurface, 10) || 0,
-      maxSurface: parseInt(maxSurface, 10) || '',
+      maxSurface: parseInt(maxSurface, 10) || Infinity,
       minRooms: parseInt(minRooms, 10) || 0,
-      maxRooms: parseInt(maxRooms, 10) || '',
-      selectedWilaya: selectedWilaya?.number || '',
+      maxRooms: parseInt(maxRooms, 10) || Infinity,
+      selectedWilaya: selectedWilaya?.name || selectedLocation || '', // Use wilaya as primary location, fallback to search input
       propertyType,
-      engagementType,
-      isEquipped,
+      engagementType, // 'location' or 'achat'
+      isEquipped: isEquipped ? 'true' : 'false',
     };
+
+    console.log('FilterSidebar: Applying filters:', filters);
+
+    // Construct query string
+    const queryParams = new URLSearchParams();
+    if (filters.selectedWilaya) queryParams.set('location', filters.selectedWilaya); // Wilaya or autosuggestion as location
+    if (filters.minPrice > 0) queryParams.set('minPrice', filters.minPrice);
+    if (filters.maxPrice !== Infinity) queryParams.set('maxPrice', filters.maxPrice);
+    if (filters.minSurface > 0) queryParams.set('minSurface', filters.minSurface);
+    if (filters.maxSurface !== Infinity) queryParams.set('maxSurface', filters.maxSurface);
+    if (filters.minRooms > 0) queryParams.set('minRooms', filters.minRooms);
+    if (filters.maxRooms !== Infinity) queryParams.set('maxRooms', filters.maxRooms);
+    if (filters.propertyType) queryParams.set('type', filters.propertyType);
+    if (filters.engagementType) queryParams.set('engagement', filters.engagementType);
+    if (filters.isEquipped === 'true') queryParams.set('equipped', 'true');
+
+    navigate(`/listings?${queryParams.toString()}`);
     onApplyFilters(filters);
+    if (onClose) onClose();
   };
 
   const handleNonNegativeInput = (setState) => (e) => {
     const value = Math.max(0, parseInt(e.target.value, 10));
-    setState(value.toString() || '');
+    setState(isNaN(value) ? '' : value.toString());
   };
 
   return (
-    <div
-      className="bg-dark text-white"
-      style={{ minWidth: '0', maxWidth: '1000px' }}
-    >
+    <div className="bg-dark text-white" style={{ minWidth: '0', maxWidth: '1000px' }}>
       <h2 className="mb-4">Filtrer les résultats</h2>
       <Form onSubmit={handleSubmit}>
         {/* Wilaya Selection */}
@@ -209,6 +225,7 @@ function FilterSidebar({ onApplyFilters }) {
             <option value="studio">Studio</option>
           </Form.Select>
         </Form.Group>
+
         {/* Equipped Property */}
         <Form.Group className="mb-3">
           <Form.Check
@@ -245,8 +262,6 @@ function FilterSidebar({ onApplyFilters }) {
             />
           </div>
         </Form.Group>
-
-        
 
         {/* Apply Filters Button */}
         <Button
