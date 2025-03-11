@@ -1,4 +1,3 @@
-// src/Components/Navbar/Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import io from 'socket.io-client';
@@ -135,16 +134,6 @@ export default function Navbar() {
                 Home
               </Link>
             </li>
-            <li className="nav-item">
-              <a className="nav-link" href="#">
-                Link
-              </a>
-            </li>
-            <li className="nav-item">
-              <a className="nav-link disabled" aria-disabled="true">
-                Disabled
-              </a>
-            </li>
             <li className="nav-item dropdown">
               <a
                 className="nav-link dropdown-toggle"
@@ -152,7 +141,7 @@ export default function Navbar() {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Louer
+                Louer ou Acheter
               </a>
               <ul className="dropdown-menu">
                 <li>
@@ -165,18 +154,17 @@ export default function Navbar() {
                     Villa
                   </Link>
                 </li>
-                <li><a className="dropdown-item" href="#">Bureau</a></li>
+                <li><a className="dropdown-item" href="/listings?type=bureau">Bureau</a></li>
               </ul>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/home-value">
+                Home Value
+              </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/contact">
                 Contact Us
-              </Link>
-            </li>
-            {/* Add Home Value Link */}
-            <li className="nav-item">
-              <Link className="nav-link" to="/home-value">
-                Home Value
               </Link>
             </li>
           </ul>

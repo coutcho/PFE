@@ -12,6 +12,7 @@ import GoogleStrategy from "passport-google-oauth20";
 import propertiesRoutes from './propertiesRoutes.js';
 import usersRoutes from './usersRoutes.js';
 import inquiriesRoutes from './inquiriesRoutes.js';
+import homeValuesRoutes from './HomeValueRoutes.js'
 
 const app = express();
 const port = 3001;
@@ -388,7 +389,7 @@ app.post("/api/contact", async (req, res) => {
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/inquiries', inquiriesRoutes);
-
+app.use('/api/home-values', homeValuesRoutes);
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

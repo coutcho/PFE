@@ -1,15 +1,69 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 function HomeValueHero() {
   const [address, setAddress] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
   const fileInputRef = useRef(null);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  // Check authentication status on mount
+  useEffect(() => {
+    setIsAuthenticated(!!localStorage.getItem('authToken'));
+  }, []);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Address submitted:', address);
-    if (selectedFiles.length > 0) {
-      console.log('Selected files:', selectedFiles);
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      alert('Please sign in to submit a home value request.');
+      navigate('/'); // Redirect to login page (adjust path as needed)
+      return;
+    }
+
+    // Check if address is provided
+    if (!address.trim()) {
+      alert('Please enter an address.');
+      return;
+    }
+
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append('address', address);
+    selectedFiles.forEach((file) => {
+      formData.append('images', file); // 'images' matches Multer's expected field name
+    });
+
+    try {
+      const response = await fetch('http://localhost:3001/api/home-values', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Send auth token
+        },
+        body: formData, // No Content-Type header needed; FormData sets it automatically
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to submit home value request');
+      }
+
+      const data = await response.json();
+      console.log('Server response:', data);
+      alert('Home value request submitted successfully! Experts will review it.');
+      
+      // Reset form
+      setAddress('');
+      setSelectedFiles([]);
+      fileInputRef.current.value = null; // Clear file input
+
+      // Optional: Navigate to inbox
+      // navigate('/inbox');
+    } catch (error) {
+      console.error('Error submitting home value:', error);
+      alert(`Failed to submit home value request: ${error.message}`);
     }
   };
 
@@ -24,7 +78,7 @@ function HomeValueHero() {
   };
 
   const heroStyle = {
-    backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80")',
+    backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url("/value.jpg")',
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     minHeight: '80vh',
@@ -37,10 +91,10 @@ function HomeValueHero() {
           <div className="col-12 col-md-10 col-lg-8 text-center text-white">
             <h1 className="display-4 fw-bold mb-4">How much is my home worth?</h1>
             <p className="lead mb-5">
-              Enter your address to get your free Zestimate instantly and claim your home, 
+              Enter your address to get your free Zestimate instantly and claim your home,
               or request a no-obligation market value offer from Zillow.
             </p>
-            
+
             <form onSubmit={handleSubmit} className="mb-4">
               <div className="row g-2 justify-content-center">
                 <div className="col-12 col-lg-8">
@@ -54,8 +108,8 @@ function HomeValueHero() {
                   />
                 </div>
                 <div className="col-6 col-lg-2">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="btn btn-outline-light btn-lg w-100"
                     onClick={handleImport}
                   >
@@ -71,8 +125,8 @@ function HomeValueHero() {
                   />
                 </div>
                 <div className="col-6 col-lg-2">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     className="btn btn-primary btn-lg w-100"
                   >
                     Envoyer
@@ -80,7 +134,7 @@ function HomeValueHero() {
                 </div>
               </div>
             </form>
-            
+
             {/* Display selected file names if any */}
             {selectedFiles.length > 0 && (
               <div className="text-start bg-dark bg-opacity-50 p-2 rounded mb-3">
