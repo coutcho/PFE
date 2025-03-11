@@ -9,7 +9,8 @@ import AuthCallback from './Components/Navbar/AuthCallback';
 import Chat from './Components/Chat/Chat';
 import Profile from './Components/Navbar/Profile';
 import FavoritesPage from './Components/Navbar/FavoritesListings';
-import Contact from './Components/Navbar/Contact'; // Import Contact component
+import Contact from './Components/Navbar/Contact';
+import HomeValue from './Components/Navbar/HomeValue'; // Import HomeValue
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -131,10 +132,19 @@ export default function App() {
             }
           />
           <Route
-            path="/contact" // New Contact route
+            path="/contact"
             element={
               <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
                 <Contact />
+                <Footer />
+              </Layout>
+            }
+          />
+          <Route
+            path="/home-value" // New Home Value route
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <HomeValue />
                 <Footer />
               </Layout>
             }

@@ -43,7 +43,7 @@ const authenticateUser = (req, res, next) => {
 
 // Validate role is one of the allowed values
 const validateRole = (role) => {
-  const allowedRoles = ['admin', 'chauffeur', 'agent'];
+  const allowedRoles = ['admin', 'expert', 'agent'];
   return allowedRoles.includes(role);
 };
 
@@ -187,7 +187,7 @@ router.post('/', authenticateAdmin, async (req, res) => {
   
   try {
     if (!validateRole(role)) {
-      return res.status(400).json({ message: 'Invalid role. Must be admin, chauffeur, or agent' });
+      return res.status(400).json({ message: 'Invalid role. Must be admin, expert, or agent' });
     }
     
     const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
@@ -221,7 +221,7 @@ router.put('/:id', authenticateAdmin, async (req, res) => {
   
   try {
     if (role && !validateRole(role)) {
-      return res.status(400).json({ message: 'Invalid role. Must be admin, chauffeur, or agent' });
+      return res.status(400).json({ message: 'Invalid role. Must be admin, expert, or agent' });
     }
     
     const userExists = await pool.query('SELECT * FROM users WHERE id = $1', [id]);

@@ -168,10 +168,15 @@ export default function Navbar() {
                 <li><a className="dropdown-item" href="#">Bureau</a></li>
               </ul>
             </li>
-            {/* Add Contact Us Link */}
             <li className="nav-item">
               <Link className="nav-link" to="/contact">
                 Contact Us
+              </Link>
+            </li>
+            {/* Add Home Value Link */}
+            <li className="nav-item">
+              <Link className="nav-link" to="/home-value">
+                Home Value
               </Link>
             </li>
           </ul>

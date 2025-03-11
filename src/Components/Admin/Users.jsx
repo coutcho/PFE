@@ -32,7 +32,7 @@ function Users() {
           throw new Error('Failed to fetch users');
         }
         const data = await response.json();
-        const filteredUsers = data.filter(user => ['admin', 'chauffeur', 'agent'].includes(user.role));
+        const filteredUsers = data.filter(user => ['admin', 'expert', 'agent'].includes(user.role));
         setUsers(filteredUsers);
       } catch (err) {
         setError(err.message);
@@ -98,7 +98,7 @@ function Users() {
         setUsers(users.map(u => (u.id === editingUser.id ? savedUser : u)));
         setEditingUser(null);
       } else {
-        if (['admin', 'chauffeur', 'agent'].includes(savedUser.role)) {
+        if (['admin', 'expert', 'agent'].includes(savedUser.role)) {
           setUsers([...users, savedUser]);
         }
       }
@@ -144,7 +144,7 @@ function Users() {
     switch (role) {
       case 'admin':
         return 'danger';
-      case 'chauffeur':
+      case 'expert':
         return 'primary';
       case 'agent':
         return 'success';
@@ -225,7 +225,7 @@ function Users() {
                   >
                     <option value="">Select role...</option>
                     <option value="admin">Admin</option>
-                    <option value="chauffeur">Chauffeur</option>
+                    <option value="expert">Expert</option>
                     <option value="agent">Agent</option>
                   </select>
                 </div>
