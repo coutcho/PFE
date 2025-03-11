@@ -13,8 +13,8 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
 
   const validateForm = () => {
     const newErrors = {};
-    if (!email) newErrors.email = "Email is required";
-    if (!password) newErrors.password = "Password is required";
+    if (!email) newErrors.email = "L'email est requis";
+    if (!password) newErrors.password = "Le mot de passe est requis";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -34,7 +34,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
         const data = await response.json();
 
         if (response.ok) {
-          setSuccessMessage(data.message || "Sign-in successful! Welcome back!");
+          setSuccessMessage(data.message || "Connexion réussie ! Bienvenue !");
           if (data.token) {
             localStorage.setItem("authToken", data.token);
             const decodedToken = jwtDecode(data.token);
@@ -56,14 +56,14 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
               setSuccessMessage("");
             }, 2000);
           } else {
-            throw new Error("No token received");
+            throw new Error("Aucun jeton reçu");
           }
         } else {
-          setServerError(data.message || "An error occurred during sign-in.");
+          setServerError(data.message || "Une erreur s'est produite lors de la connexion.");
         }
       } catch (error) {
-        console.error("Error during sign-in:", error);
-        setServerError("Network error or invalid response. Please try again.");
+        console.error("Erreur lors de la connexion :", error);
+        setServerError("Erreur réseau ou réponse invalide. Veuillez réessayer.");
       }
     }
   };
@@ -80,12 +80,12 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header border-0">
-              <h5 className="modal-title">Sign In</h5>
+              <h5 className="modal-title">Connexion</h5>
               <button
                 type="button"
                 className="btn-close"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label="Fermer"
               ></button>
             </div>
             <div className="modal-body px-4">
@@ -102,7 +102,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                     <input
                       type="email"
                       className={`form-control ${errors.email ? "is-invalid" : ""}`}
-                      placeholder="Email address"
+                      placeholder="Adresse e-mail"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -114,7 +114,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                     <input
                       type="password"
                       className={`form-control ${errors.password ? "is-invalid" : ""}`}
-                      placeholder="Password"
+                      placeholder="Mot de passe"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
@@ -132,14 +132,14 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                         onForgotPasswordClick();
                       }}
                     >
-                      Forgot your password?
+                      Mot de passe oublié ?
                     </a>
                   </div>
                   <button type="submit" className="btn btn-primary w-100 mb-3">
-                    Sign In
+                    Se connecter
                   </button>
                   <div className="text-center mb-3">
-                    <span className="text-muted">or sign in with</span>
+                    <span className="text-muted">ou connectez-vous avec</span>
                   </div>
                   <div className="d-flex gap-2 mb-3">
                     <button
@@ -160,7 +160,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                     </button>
                   </div>
                   <div className="text-center">
-                    <span className="text-muted">Don't have an account? </span>
+                    <span className="text-muted">Pas de compte ? </span>
                     <a
                       href="#"
                       className="text-primary text-decoration-none"
@@ -170,7 +170,7 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                         onSignUpClick();
                       }}
                     >
-                      Create one
+                      Créez-en un
                     </a>
                   </div>
                 </form>

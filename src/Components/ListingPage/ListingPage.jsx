@@ -19,7 +19,7 @@ function ListingPage() {
       try {
         const response = await fetch(`http://localhost:3001/api/properties/${id}`);
         if (!response.ok) {
-          throw new Error('Failed to fetch property details');
+          throw new Error('Échec de récupération des détails de la propriété');
         }
         const data = await response.json();
         setProperty(data);
@@ -35,7 +35,7 @@ function ListingPage() {
   // Listen for a global login event (emitted by Navbar after successful login)
   useEffect(() => {
     const handleLoginSuccess = () => {
-      console.log('Login success event received in ListingPage');
+      console.log('Événement de connexion réussie reçu dans ListingPage');
       setRefreshAgentTrigger(prev => prev + 1); // Trigger ContactAgent to re-fetch agent data
     };
 
@@ -45,9 +45,9 @@ function ListingPage() {
     };
   }, []);
 
-  if (loading) return <div className="min-vh-100 bg-light">Loading...</div>;
-  if (error) return <div className="min-vh-100 bg-light">Error: {error}</div>;
-  if (!property) return <div className="min-vh-100 bg-light">Property not found</div>;
+  if (loading) return <div className="min-vh-100 bg-light">Chargement...</div>;
+  if (error) return <div className="min-vh-100 bg-light">Erreur: {error}</div>;
+  if (!property) return <div className="min-vh-100 bg-light">Propriété non trouvée</div>;
 
   return (
     <>

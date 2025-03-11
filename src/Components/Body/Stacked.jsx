@@ -1,6 +1,7 @@
 import React from 'react';
 import PropertyCard from './PropertyCard';
-import "./StackedCSS.css"
+import Footer from '../Footer/Footer'; // Import the Footer component
+import "./StackedCSS.css";
 
 const Stacked = ({ properties, onSelectProperty, selectedProperty }) => {
   return (
@@ -22,6 +23,7 @@ const Stacked = ({ properties, onSelectProperty, selectedProperty }) => {
           <PropertyCard property={property} />
         </div>
       ))}
+      <Footer /> {/* Add the Footer component here */}
     </div>
   );
 };

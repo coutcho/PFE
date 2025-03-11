@@ -42,16 +42,16 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!newPassword) newErrors.newPassword = 'New password is required';
-    if (!confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
-    if (newPassword !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!newPassword) newErrors.newPassword = 'Le nouveau mot de passe est requis';
+    if (!confirmPassword) newErrors.confirmPassword = 'Veuillez confirmer votre mot de passe';
+    if (newPassword !== confirmPassword) newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
     
     // Basic strength checks (synchronous)
     if (newPassword && newPassword.length < 8) {
-      newErrors.newPassword = 'Password must be at least 8 characters long';
+      newErrors.newPassword = 'Le mot de passe doit contenir au moins 8 caractères';
     }
     if (newPassword && newPassword.toLowerCase().startsWith('12345678')) {
-      newErrors.newPassword = 'This password is too common. Please choose a stronger one.';
+      newErrors.newPassword = 'Ce mot de passe est trop courant. Veuillez en choisir un plus fort.';
     }
 
     setErrors(newErrors);
@@ -64,7 +64,7 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
       // Additional HIBP check (async)
       const isPwned = await checkPasswordWithHIBP(newPassword);
       if (isPwned) {
-        setErrors({ newPassword: 'This password is too common. Please choose a stronger one.' });
+        setErrors({ newPassword: 'Ce mot de passe est trop courant. Veuillez en choisir un plus fort.' });
         return;
       }
 
@@ -90,12 +90,12 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
           }, 2000);
         } else {
           setIsSuccess(false);
-          setMessage(data.message || 'An error occurred.');
+          setMessage(data.message || 'Une erreur est survenue.');
         }
       } catch (error) {
         console.error('Error in reset password:', error);
         setIsSuccess(false);
-        setMessage('Network error. Please try again.');
+        setMessage('Erreur réseau. Veuillez réessayer.');
       }
     }
   };
@@ -113,7 +113,7 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header border-0">
-              <h5 className="modal-title">Set New Password</h5>
+              <h5 className="modal-title">Définir un nouveau mot de passe</h5>
               <button type="button" className="btn-close" onClick={handleClose}></button>
             </div>
             <div className="modal-body px-4">
@@ -127,7 +127,7 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
                     <input
                       type="password"
                       className={`form-control ${errors.newPassword ? 'is-invalid' : ''}`}
-                      placeholder="New Password"
+                      placeholder="Nouveau mot de passe"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                     />
@@ -137,14 +137,14 @@ function ResetPasswordModal({ show, onClose, onSignInClick }) {
                     <input
                       type="password"
                       className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                      placeholder="Confirm New Password"
+                      placeholder="Confirmer le nouveau mot de passe"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                     />
                     {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
                   </div>
                   <button type="submit" className="btn btn-primary w-100 mb-3">
-                    Reset Password
+                    Réinitialiser le mot de passe
                   </button>
                 </form>
               )}

@@ -1,9 +1,11 @@
+// src/Components/Body/PropertyCard.jsx
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler, FaBuilding, FaChair } from 'react-icons/fa';
+import { useFavorites } from '../Body/FavoritesContext';
 
-const PropertyCard = ({ property }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
+const PropertyCard = ({ property, onClick }) => {
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
 
   if (!property) {
     return <div>Loading property...</div>;
@@ -11,14 +13,17 @@ const PropertyCard = ({ property }) => {
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
+    if (isFavorite(property.id)) {
+      removeFavorite(property.id);
+    } else {
+      addFavorite(property);
+    }
   };
 
   const imageSrc = property.images_path && Array.isArray(property.images_path) && property.images_path.length > 0 
     ? `http://localhost:3001/${property.images_path[0]}` 
     : 'https://via.placeholder.com/800';
 
-  // Function to convert string to title case (capitalize first letter of each word)
   const toTitleCase = (str) => {
     if (!str) return '';
     return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -32,6 +37,7 @@ const PropertyCard = ({ property }) => {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.3 }}
+      onClick={onClick}
     >
       <div className="position-relative">
         <img
@@ -47,17 +53,14 @@ const PropertyCard = ({ property }) => {
           className="position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2"
           onClick={handleFavoriteClick}
         >
-          {isFavorite ? <FaHeart color="red" /> : <FaRegHeart />}
+          {isFavorite(property.id) ? <FaHeart color="red" /> : <FaRegHeart />}
         </button>
       </div>
       <div className="card-body">
-        {/* Title with only the first letter of each word capitalized */}
         <h5 className="card-title">{toTitleCase(property.title) || 'Untitled Property'}</h5>
-        {/* Price: blue, slightly bigger, aligned to the left, and now bold */}
         <h5 className="mb-2" style={{ color: '#007bff', fontSize: '1.4rem', fontWeight: 'bold' }}>
           {(typeof property.price === 'number' ? property.price : 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} DA
         </h5>
-        {/* Property Details */}
         <div className="d-flex gap-3 mb-2">
           <span>
             <FaBed className="me-1" /> {property.bedrooms || 0} chambre

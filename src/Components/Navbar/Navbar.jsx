@@ -1,4 +1,4 @@
-// In Navbar.jsx
+// src/Components/Navbar/Navbar.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import io from 'socket.io-client';
@@ -77,7 +77,6 @@ export default function Navbar() {
   const handleSignInSuccess = () => {
     setIsSignedIn(true);
     closeModal();
-    // Emit a custom event to notify other components of login
     window.dispatchEvent(new Event('loginSuccess'));
     console.log('Login successful, event dispatched');
   };
@@ -109,7 +108,7 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`navbar navbar-expand-lg bg-body-tertiary rounded ${
+      className={`navbar navbar-expand-lg bg-body-tertiary ${
         scrolled ? "scrolled" : ""
       }`}
       aria-label="Eleventh navbar example"
@@ -168,6 +167,12 @@ export default function Navbar() {
                 </li>
                 <li><a className="dropdown-item" href="#">Bureau</a></li>
               </ul>
+            </li>
+            {/* Add Contact Us Link */}
+            <li className="nav-item">
+              <Link className="nav-link" to="/contact">
+                Contact Us
+              </Link>
             </li>
           </ul>
           <div className="d-flex align-items-center gap-2">

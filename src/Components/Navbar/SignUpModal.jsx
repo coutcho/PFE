@@ -10,7 +10,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
   });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
-  const [successMessage, setSuccessMessage] = useState(''); // New state for success message
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,17 +24,17 @@ function SignUpModal({ show, onClose, onSignInClick }) {
     const newErrors = {};
     
     if (!formData.fullName) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = 'Le nom complet est requis';
     } else if (/\d/.test(formData.fullName)) {
-      newErrors.fullName = 'Full name cannot contain numbers';
+      newErrors.fullName = 'Le nom complet ne peut pas contenir de chiffres';
     }
 
-    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.email) newErrors.email = 'L\'email est requis';
 
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
+    if (!formData.password) newErrors.password = 'Le mot de passe est requis';
+    if (!formData.confirmPassword) newErrors.confirmPassword = 'Veuillez confirmer votre mot de passe';
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
     }
 
     setErrors(newErrors);
@@ -64,22 +64,20 @@ function SignUpModal({ show, onClose, onSignInClick }) {
         const data = await response.json();
 
         if (response.ok) {
-          // Set success message instead of closing immediately
-          setSuccessMessage(data.message || 'Account created successfully! Welcome aboard!');
+          setSuccessMessage(data.message || 'Compte créé avec succès ! Bienvenue à bord !');
           setFormData({ fullName: '', email: '', password: '', confirmPassword: '' });
           setErrors({});
           setServerError('');
-          // Optional: Close modal after a delay
           setTimeout(() => {
             onClose();
-            setSuccessMessage(''); // Clear success message after closing
-          }, 2000); // 2-second delay before closing
+            setSuccessMessage('');
+          }, 2000);
         } else {
-          setServerError(data.message || 'An error occurred during sign-up.');
+          setServerError(data.message || 'Une erreur est survenue lors de l\'inscription.');
         }
       } catch (error) {
-        console.error('Error during sign-up:', error);
-        setServerError('Network error. Please try again.');
+        console.error('Erreur lors de l\'inscription:', error);
+        setServerError('Erreur réseau. Veuillez réessayer.');
       }
     }
   };
@@ -92,8 +90,8 @@ function SignUpModal({ show, onClose, onSignInClick }) {
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header border-0">
-              <h5 className="modal-title">Create Account</h5>
-              <button type="button" className="btn-close" onClick={onClose} aria-label="Close"></button>
+              <h5 className="modal-title">Créer un compte</h5>
+              <button type="button" className="btn-close" onClick={onClose} aria-label="Fermer"></button>
             </div>
             <div className="modal-body px-4">
               {successMessage ? (
@@ -109,7 +107,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                       type="text"
                       name="fullName"
                       className={`form-control ${errors.fullName ? 'is-invalid' : ''}`}
-                      placeholder="Full Name"
+                      placeholder="Nom complet"
                       value={formData.fullName}
                       onChange={handleChange}
                     />
@@ -120,7 +118,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                       type="email"
                       name="email"
                       className={`form-control ${errors.email ? 'is-invalid' : ''}`}
-                      placeholder="Email address"
+                      placeholder="Adresse email"
                       value={formData.email}
                       onChange={handleChange}
                     />
@@ -131,7 +129,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                       type="password"
                       name="password"
                       className={`form-control ${errors.password ? 'is-invalid' : ''}`}
-                      placeholder="Password"
+                      placeholder="Mot de passe"
                       value={formData.password}
                       onChange={handleChange}
                     />
@@ -142,17 +140,17 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                       type="password"
                       name="confirmPassword"
                       className={`form-control ${errors.confirmPassword ? 'is-invalid' : ''}`}
-                      placeholder="Confirm Password"
+                      placeholder="Confirmer le mot de passe"
                       value={formData.confirmPassword}
                       onChange={handleChange}
                     />
                     {errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
                   </div>
                   <button type="submit" className="btn btn-success w-100 mb-3">
-                    Sign Up
+                    S'inscrire
                   </button>
                   <div className="text-center mb-3">
-                    <span className="text-muted">or sign up with</span>
+                    <span className="text-muted">ou s'inscrire avec</span>
                   </div>
                   <div className="d-flex gap-2 mb-3">
                     <button type="button" className="btn btn-outline-secondary flex-grow-1">
@@ -165,7 +163,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                     </button>
                   </div>
                   <div className="text-center">
-                    <span className="text-muted">Already have an account? </span>
+                    <span className="text-muted">Vous avez déjà un compte? </span>
                     <a
                       href="#"
                       className="text-primary text-decoration-none"
@@ -175,7 +173,7 @@ function SignUpModal({ show, onClose, onSignInClick }) {
                         onSignInClick();
                       }}
                     >
-                      Sign In
+                      Se connecter
                     </a>
                   </div>
                 </form>

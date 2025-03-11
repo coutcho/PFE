@@ -11,14 +11,14 @@ export default function ContactAgent({ property, refreshAgent }) {
   const token = localStorage.getItem('authToken');
   const AGENT_API_URL = 'http://localhost:3001/api/users/agents';
 
-  // Fetch agent details based on property.agent_id
+  // Récupérer les détails de l'agent basés sur property.agent_id
   useEffect(() => {
-    console.log('useEffect triggered - property.agent_id:', property?.agent_id, 'refreshAgent:', refreshAgent);
+    console.log('useEffect déclenché - property.agent_id:', property?.agent_id, 'refreshAgent:', refreshAgent);
     const fetchAgent = async () => {
       if (!property?.agent_id) {
         setLoading(false);
-        setError('No agent assigned to this property.');
-        console.log('No agent_id provided for property:', property);
+        setError('Aucun agent assigné à ce bien.');
+        console.log('Aucun agent_id fourni pour la propriété:', property);
         return;
       }
 
@@ -26,50 +26,50 @@ export default function ContactAgent({ property, refreshAgent }) {
       setError(null);
 
       try {
-        // Remove the Authorization header since we want this to be public
+        // Supprimer l'en-tête Authorization puisque nous voulons que ce soit public
         const response = await fetch(`${AGENT_API_URL}/${property.agent_id}`);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch agent details');
+          throw new Error('Échec de récupération des détails de l\'agent');
         }
         
         const agentData = await response.json();
         setAgent(agentData);
-        console.log('Agent data fetched successfully:', agentData);
+        console.log('Données de l\'agent récupérées avec succès:', agentData);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching agent:', err);
+        console.error('Erreur lors de la récupération de l\'agent:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchAgent();
-  }, [property?.agent_id, refreshAgent]); // Removed token from dependencies since it's not needed for fetch
+  }, [property?.agent_id, refreshAgent]); // Token retiré des dépendances puisqu'il n'est pas nécessaire pour fetch
 
-  // Function to open the modal (still requires login)
+  // Fonction pour ouvrir la modal (nécessite toujours une connexion)
   const openModal = () => {
     if (!token) {
-      setError('Please sign in to contact the agent.');
+      setError('Veuillez vous connecter pour contacter l\'agent.');
       return;
     }
     setIsModalOpen(true);
   };
 
-  // Function to close the modal
+  // Fonction pour fermer la modal
   const closeModal = () => {
     setIsModalOpen(false);
   };
 
-  // Render loading, error, or no-agent states
-  if (loading) return <div>Loading agent details...</div>;
+  // Afficher les états de chargement, d'erreur ou d'absence d'agent
+  if (loading) return <div>Chargement des détails de l'agent...</div>;
   if (error) return <div className="card mt-4 agent"><div className="card-body"><p className="text-danger">{error}</p></div></div>;
   if (!property?.agent_id || !agent) {
     return (
       <div className="card mt-4 agent">
         <div className="card-body">
-          <h2 className="h4 fw-bold">Contact Agent</h2>
-          <p className="text-muted mt-3">No agent assigned to this property.</p>
+          <h2 className="h4 fw-bold">Contacter l'agent</h2>
+          <p className="text-muted mt-3">Aucun agent assigné à ce bien.</p>
         </div>
       </div>
     );
@@ -78,9 +78,9 @@ export default function ContactAgent({ property, refreshAgent }) {
   return (
     <div className="card mt-4 agent">
       <div className="card-body">
-        <h2 className="h4 fw-bold">Contact Agent</h2>
+        <h2 className="h4 fw-bold">Contacter l'agent</h2>
 
-        {/* Agent Details */}
+        {/* Détails de l'agent */}
         <div className="d-flex align-items-center gap-3 mt-3">
           <img
             src="https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80"
@@ -90,30 +90,30 @@ export default function ContactAgent({ property, refreshAgent }) {
           />
           <div>
             <h3 className="h5 fw-semibold mb-1">{agent.name}</h3>
-            <p className="text-muted mb-0">Real Estate Agent</p>
+            <p className="text-muted mb-0">Agent Immobilier</p>
           </div>
         </div>
 
-        {/* Contact Information */}
+        {/* Informations de contact */}
         <div className="mt-4">
           <div className="d-flex align-items-center gap-2 mb-2">
             <Phone className="text-primary" size={20} />
-            <span>{agent.phone || 'Phone not available'}</span>
+            <span>{agent.phone || 'Téléphone non disponible'}</span>
           </div>
           <div className="d-flex align-items-center gap-2">
             <Mail className="text-primary" size={20} />
-            <span>{agent.email || 'Email not available'}</span>
+            <span>{agent.email || 'Email non disponible'}</span>
           </div>
         </div>
 
-        {/* Form to Trigger Modal */}
+        {/* Formulaire pour déclencher la modale */}
         <form className="mt-4">
           <button type="button" className="btn btn-primary w-100" onClick={openModal}>
             Contacter
           </button>
         </form>
 
-        {/* Embed the Modal Component */}
+        {/* Intégrer le composant Modal */}
         <PropertyInquiryModal 
           show={isModalOpen} 
           onClose={closeModal} 

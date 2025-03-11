@@ -153,14 +153,14 @@ app.post("/api/signup", async (req, res) => {
   }
 
   if (pass.length < 8) {
-    return res.status(400).json({ message: "Password must be at least 8 characters long" });
+    return res.status(400).json({ message: "Le mot de passe doit contenir au moins 8 caractères" });
   }
   if (pass.toLowerCase().startsWith("12345678")) {
-    return res.status(400).json({ message: "This password is too common. Please choose a stronger one." });
+    return res.status(400).json({ message: "Ce mot de passe est trop courant. Veuillez en choisir un plus sécurisé." });
   }
   const isPwned = await checkPasswordWithHIBP(pass);
   if (isPwned) {
-    return res.status(400).json({ message: "This password is too common. Please choose a stronger one." });
+    return res.status(400).json({ message: "Ce mot de passe est trop courant. Veuillez en choisir un plus sécurisé." });
   }
 
   try {
@@ -178,7 +178,7 @@ app.post("/api/signup", async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Account created successfully! Welcome aboard!",
+      message: "Compte créé avec succès ! Bienvenue à bord !",
       user: {
         id: newUser.rows[0].id,
         fullname: newUser.rows[0].fullname,
@@ -224,7 +224,7 @@ app.post("/api/signin", async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Sign-in successful! Welcome back!",
+      message: "Connexion réussie ! Bon retour !",
       token,
       user: {
         id: user.id,
@@ -355,10 +355,40 @@ app.post("/api/reset-password", async (req, res) => {
   }
 });
 
+// Contact endpoint
+app.post("/api/contact", async (req, res) => {
+  const { fullName, email, comments } = req.body;
+
+  if (!fullName || !email || !comments) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  const mailOptions = {
+    from: "rayanos.adjinatos@gmail.com", // Sender (your Gmail)
+    replyTo: email, // User's email as reply-to
+    to: "rayanos.adjinatos@gmail.com", // Your email to receive messages
+    subject: `New Contact Form Submission from ${fullName}`,
+    text: `
+      Full Name: ${fullName}
+      Email: ${email}
+      Comments: ${comments}
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Message sent successfully" });
+  } catch (error) {
+    console.error("Error sending contact email:", error);
+    res.status(500).json({ message: "Failed to send message" });
+  }
+});
+
 // Mount the routes
 app.use('/api/properties', propertiesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/inquiries', inquiriesRoutes);
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

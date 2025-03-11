@@ -15,11 +15,11 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
     setError("");
 
     if (!email) {
-      setError("Email is required");
+      setError("L'email est requis");
       return;
     }
     if (!validateEmail(email)) {
-      setError("Please enter a valid email address");
+      setError("Veuillez entrer une adresse email valide");
       return;
     }
 
@@ -37,11 +37,11 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
       if (response.ok) {
         setIsSubmitted(true); // Show success UI
       } else {
-        setError(data.message || "An error occurred. Please try again.");
+        setError(data.message || "Une erreur est survenue. Veuillez réessayer.");
       }
     } catch (error) {
       console.error("Error requesting password reset:", error);
-      setError("Network error. Please check your connection and try again.");
+      setError("Erreur réseau. Veuillez vérifier votre connexion et réessayer.");
     }
   };
 
@@ -53,12 +53,12 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
         <div className="modal-dialog modal-dialog-centered">
           <div className="modal-content">
             <div className="modal-header border-0">
-              <h5 className="modal-title">Reset Password</h5>
+              <h5 className="modal-title">Réinitialiser le mot de passe</h5>
               <button
                 type="button"
                 className="btn-close"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label="Fermer"
               ></button>
             </div>
             <div className="modal-body px-4">
@@ -66,22 +66,22 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
                 <form onSubmit={handleSubmit}>
                   <div className="mb-4">
                     <p className="text-muted">
-                      Enter your email address and we'll send you instructions to
-                      reset your password.
+                      Entrez votre adresse email et nous vous enverrons des instructions pour
+                      réinitialiser votre mot de passe.
                     </p>
                   </div>
                   <div className="mb-3">
                     <input
                       type="email"
                       className={`form-control ${error ? "is-invalid" : ""}`}
-                      placeholder="Email address"
+                      placeholder="Adresse email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                     {error && <div className="invalid-feedback">{error}</div>}
                   </div>
                   <button type="submit" className="btn btn-primary w-100 mb-3">
-                    Continue
+                    Continuer
                   </button>
                   <div className="text-center">
                     <a
@@ -92,7 +92,7 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
                         onBackToSignIn();
                       }}
                     >
-                      Back to Sign In
+                      Retour à la connexion
                     </a>
                   </div>
                 </form>
@@ -109,16 +109,16 @@ function ForgotPasswordModal({ show, onClose, onBackToSignIn }) {
                       <path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z" />
                     </svg>
                   </div>
-                  <h5 className="mb-3">Check your email</h5>
+                  <h5 className="mb-3">Vérifiez votre email</h5>
                   <p className="text-muted mb-4">
-                    We've sent password reset instructions to:<br />
+                    Nous avons envoyé les instructions de réinitialisation du mot de passe à :<br />
                     <strong>{email}</strong>
                   </p>
                   <button
                     className="btn btn-primary"
                     onClick={onBackToSignIn}
                   >
-                    Back to Sign In
+                    Retour à la connexion
                   </button>
                 </div>
               )}

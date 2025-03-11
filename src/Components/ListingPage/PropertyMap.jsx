@@ -5,9 +5,9 @@ import 'leaflet/dist/leaflet.css';
 import './ListingCSS.css'
 import { MapPin } from 'lucide-react';
 
-// Define custom icons
+// Définir les icônes personnalisées
 const propertyIcon = new L.Icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', // Default red marker
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png', // Marqueur rouge par défaut
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -16,7 +16,7 @@ const propertyIcon = new L.Icon({
 });
 
 const nearbyIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', // Blue marker
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png', // Marqueur bleu
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
@@ -42,7 +42,7 @@ export default function PropertyMap({ location, address }) {
         const places = results.flat();
         setNearbyPlaces(places);
       } catch (error) {
-        console.error('Error fetching nearby places:', error);
+        console.error('Erreur lors de la récupération des lieux à proximité:', error);
       }
     };
 
@@ -53,16 +53,16 @@ export default function PropertyMap({ location, address }) {
     return (
       <div className="card mt-4">
         <div className="card-body">
-          <h2 className="h4 fw-bold mb-4">Location</h2>
+          <h2 className="h4 fw-bold mb-4">Emplacement</h2>
           <div className="bg-light rounded p-4 text-center">
             <MapPin className="text-primary mb-3" size={32} />
             {address ? (
               <>
                 <h3 className="h5 mb-2">{address}</h3>
-                <p className="mb-0 text-muted">Location data not available</p>
+                <p className="mb-0 text-muted">Données de localisation non disponibles</p>
               </>
             ) : (
-              <p className="mb-0 text-muted">Loading location...</p>
+              <p className="mb-0 text-muted">Chargement de l'emplacement...</p>
             )}
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function PropertyMap({ location, address }) {
   return (
     <div className="card mt-4">
       <div className="card-body">
-        <h2 className="h4 fw-bold mb-4">Location & Nearby Places</h2>
+        <h2 className="h4 fw-bold mb-4">Emplacement & Lieux à proximité</h2>
         <MapContainer
           center={[location.lat, location.lng]}
           zoom={15}
@@ -84,7 +84,7 @@ export default function PropertyMap({ location, address }) {
             attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
           <Marker position={[location.lat, location.lng]} icon={propertyIcon}>
-            <Popup>{address || 'Property Location'}</Popup>
+            <Popup>{address || 'Emplacement du bien'}</Popup>
           </Marker>
           {nearbyPlaces.map((place, index) => (
             <Marker key={index} position={[place.lat, place.lng]} icon={nearbyIcon}>
@@ -94,7 +94,7 @@ export default function PropertyMap({ location, address }) {
         </MapContainer>
         <div className="mt-3">
           <small className="text-muted">
-            * Map shows approximate location and nearby amenities
+            * La carte montre l'emplacement approximatif et les commodités à proximité
           </small>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function PropertyMap({ location, address }) {
   );
 }
 
-// Helper function to fetch nearby places using Overpass API
+// Fonction utilitaire pour récupérer les lieux à proximité en utilisant l'API Overpass
 const fetchNearbyPlaces = async (lat, lng, type) => {
   const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];node(around:1500,${lat},${lng})[amenity=${type}];out;`;
   const response = await fetch(overpassUrl);
@@ -110,6 +110,6 @@ const fetchNearbyPlaces = async (lat, lng, type) => {
   return data.elements.map((element) => ({
     lat: element.lat,
     lng: element.lon,
-    name: element.tags.name || 'Unknown',
+    name: element.tags.name || 'Inconnu',
   }));
 };

@@ -1,28 +1,34 @@
-import React, { useState } from 'react';
+// src/Components/ListingPage/PropertyDetails.jsx (or wherever it lives)
+import React from 'react';
 import { Bed, Bath, Square, Heart, Share, Building, Sofa } from 'lucide-react';
+import { useFavorites } from '../Body/FavoritesContext'; // Adjust path as needed
 
 export default function PropertyDetails({ property }) {
-  const [isSaved, setIsSaved] = useState(false);
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites();
 
-  const handleSaveClick = () => {
-    setIsSaved(!isSaved);
-    // You could add API call here to save to backend if needed
+  const handleSaveClick = (e) => {
+    e.preventDefault(); // Prevent any unwanted form submission or bubbling if inside a form
+    if (isFavorite(property.id)) {
+      removeFavorite(property.id);
+    } else {
+      addFavorite(property);
+    }
   };
 
   const handleShareClick = () => {
     const currentUrl = window.location.href;
     navigator.clipboard.writeText(currentUrl)
       .then(() => {
-        alert('Link copied to clipboard!');
+        alert('Lien copié dans le presse-papiers !');
       })
       .catch((err) => {
-        console.error('Failed to copy: ', err);
+        console.error('Échec de la copie : ', err);
       });
   };
 
   // Capitalize the first letter of the title
   const capitalizeTitle = (title) => {
-    if (!title) return ''; // Handle null or undefined
+    if (!title) return '';
     return title.charAt(0).toUpperCase() + title.slice(1);
   };
 
@@ -40,23 +46,23 @@ export default function PropertyDetails({ property }) {
           <div className="d-flex gap-2">
             <button 
               className={`btn d-flex align-items-center gap-2 ${
-                isSaved ? 'btn-danger' : 'btn-outline-secondary'
+                isFavorite(property.id) ? 'btn-danger' : 'btn-outline-secondary'
               }`}
               onClick={handleSaveClick}
             >
               <Heart 
                 size={20} 
-                fill={isSaved ? 'white' : 'none'} 
-                className={isSaved ? 'text-white' : ''}
+                fill={isFavorite(property.id) ? 'white' : 'none'} 
+                className={isFavorite(property.id) ? 'text-white' : ''}
               />
-              <span>{isSaved ? 'Saved' : 'Save'}</span>
+              <span>{isFavorite(property.id) ? 'Enregistré' : 'Enregistrer'}</span>
             </button>
             <button 
               className="btn btn-outline-secondary d-flex align-items-center gap-2"
               onClick={handleShareClick}
             >
               <Share size={20} />
-              <span>Share</span>
+              <span>Partager</span>
             </button>
           </div>
         </div>
@@ -66,7 +72,7 @@ export default function PropertyDetails({ property }) {
             <div className="d-flex align-items-center">
               <Bed className="text-primary me-2" size={24} />
               <div>
-                <small className="text-muted">Bedrooms</small>
+                <small className="text-muted">Chambres</small>
                 <p className="mb-0 fw-semibold">{property.bedrooms}</p>
               </div>
             </div>
@@ -76,7 +82,7 @@ export default function PropertyDetails({ property }) {
               <div className="d-flex align-items-center">
                 <Bath className="text-primary me-2" size={24} />
                 <div>
-                  <small className="text-muted">Bathrooms</small>
+                  <small className="text-muted">Salles de bain</small>
                   <p className="mb-0 fw-semibold">{property.bathrooms}</p>
                 </div>
               </div>
@@ -84,7 +90,7 @@ export default function PropertyDetails({ property }) {
               <div className="d-flex align-items-center">
                 <Building className="text-primary me-2" size={24} />
                 <div>
-                  <small className="text-muted">Etage</small>
+                  <small className="text-muted">Étage</small>
                   <p className="mb-0 fw-semibold">
                     {property.etage !== undefined && property.etage !== null 
                       ? `${property.etage}${property.etage === 1 ? "er" : "ème"}` 
@@ -98,7 +104,7 @@ export default function PropertyDetails({ property }) {
             <div className="d-flex align-items-center">
               <Square className="text-primary me-2" size={24} />
               <div>
-                <small className="text-muted">Superfice (m²)</small>
+                <small className="text-muted">Superficie (m²)</small>
                 <p className="mb-0 fw-semibold">{property.square_footage.toLocaleString('fr-DZ')}</p>
               </div>
             </div>
@@ -120,7 +126,7 @@ export default function PropertyDetails({ property }) {
         </div>
 
         <div className="mt-4">
-          <h2 className="h4 fw-bold">Features & Amenities</h2>
+          <h2 className="h4 fw-bold">Caractéristiques et Équipements</h2>
           <div className="row mt-3">
             {property.features && property.features.length > 0 ? (
               property.features.map((feature, index) => (
@@ -132,7 +138,7 @@ export default function PropertyDetails({ property }) {
                 </div>
               ))
             ) : (
-              <p>No features available</p>
+              <p>Aucune caractéristique disponible</p>
             )}
           </div>
         </div>

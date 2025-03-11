@@ -66,10 +66,8 @@ function AllListings() {
   const applyFilters = (properties, filters) => {
     let filtered = [...properties];
 
-    // Helper function to clean punctuation and split into words
     const cleanText = (text) => text.replace(/[^\w\s]/g, '').toLowerCase().split(/\s+/).filter(word => word);
 
-    // Location filter: Match at least one word
     if (filters.selectedWilaya) {
       const filterWords = cleanText(filters.selectedWilaya);
       filtered = filtered.filter((p) => {
@@ -183,34 +181,40 @@ function AllListings() {
   };
 
   return (
-    <div className="container-fluid">
-      <div className="d-flex justify-content-center mb-3 pt-3">
+    <div className="position-fixed w-100 h-100 d-flex flex-column">
+      <div className="position-absolute top-0 w-100 bg-white shadow-sm z-3 py-2 d-flex justify-content-center">
         <SearchBar onApplyFilters={handleApplyFilters} />
       </div>
-      <div className="row">
-        <div className="col-md-5 col-lg-4 p-0 border-end vh-100 d-flex flex-column">
-          <div className="flex-grow-1" style={{ overflowY: 'auto' }}>
-            {loading ? (
-              <div className="text-center p-3">
-                <div className="spinner-border" role="status">
-                  <span className="visually-hidden">Loading...</span>
-                </div>
+      
+      <div className="d-flex h-100 mt-5">
+        {/* Listings Panel */}
+        <div className="listings-panel bg-white shadow-sm" style={{ width: '600px', height: 'calc(100vh - 56px)', overflowY: 'auto' }}>
+          {loading ? (
+            <div className="d-flex justify-content-center align-items-center h-100">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
               </div>
-            ) : error ? (
-              <div className="text-danger p-3">Error: {error}</div>
-            ) : properties.length === 0 ? (
-              <div className="text-muted p-3">No properties found.</div>
-            ) : (
-              <Stacked
-                properties={properties}
-                onSelectProperty={setSelectedProperty}
-                selectedProperty={selectedProperty}
-              />
-            )}
-          </div>
+            </div>
+          ) : error ? (
+            <div className="alert alert-danger m-3" role="alert">
+              Error: {error}
+            </div>
+          ) : properties.length === 0 ? (
+            <div className="alert alert-info m-3" role="alert">
+              No properties found.
+            </div>
+          ) : (
+            <Stacked
+              properties={properties}
+              onSelectProperty={setSelectedProperty}
+              selectedProperty={selectedProperty}
+            />
+          )}
         </div>
-        <div className="col-md-7 col-lg-8 p-3 vh-100">
-          <div className="map-container rounded-3 shadow-sm" style={{ height: '100%' }}>
+
+        {/* Map Container */}
+        <div className="flex-grow-1 position-relative">
+          <div className="position-absolute top-0 start-0 w-100 h-100">
             <AllMap properties={properties} selectedProperty={selectedProperty} />
           </div>
         </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import './ChatCSS.css';
 
 function Chat({ refresh, onRefreshComplete }) {
@@ -11,6 +12,7 @@ function Chat({ refresh, onRefreshComplete }) {
   const [error, setError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const token = localStorage.getItem('authToken');
+  const navigate = useNavigate(); // Initialize useNavigate
   const API_INQUIRIES_URL = 'http://localhost:3001/api/inquiries';
   const API_USERS_URL = 'http://localhost:3001/api/users';
 
@@ -19,7 +21,7 @@ function Chat({ refresh, onRefreshComplete }) {
       fetchCurrentUser();
       fetchInquiries();
     } else {
-      setError('Please sign in to view messages');
+      setError('Veuillez vous connecter pour voir les messages');
     }
   }, [token]);
 
@@ -43,14 +45,14 @@ function Chat({ refresh, onRefreshComplete }) {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch user data: ${response.status} - ${errorText}`);
+        throw new Error(`Échec de récupération des données utilisateur: ${response.status} - ${errorText}`);
       }
       const userData = await response.json();
       setCurrentUserId(userData.id);
-      console.log('Current User ID:', userData.id);
+      console.log('ID Utilisateur Actuel:', userData.id);
     } catch (err) {
-      console.error('Error fetching current user:', err);
-      setError('Could not fetch user information');
+      console.error('Erreur lors de la récupération de l\'utilisateur actuel:', err);
+      setError('Impossible de récupérer les informations utilisateur');
     }
   };
 
@@ -61,15 +63,15 @@ function Chat({ refresh, onRefreshComplete }) {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch inquiries: ${response.status} - ${errorText}`);
+        throw new Error(`Échec de récupération des demandes: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       setInquiries(data);
       setError(null);
-      console.log('Inquiries:', data);
+      console.log('Demandes:', data);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching inquiries:', err);
+      console.error('Erreur lors de la récupération des demandes:', err);
     }
   };
 
@@ -80,21 +82,21 @@ function Chat({ refresh, onRefreshComplete }) {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to fetch messages: ${response.status} - ${errorText}`);
+        throw new Error(`Échec de récupération des messages: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       setMessages(data);
       setError(null);
-      console.log('Messages for inquiry', inquiryId, ':', data);
+      console.log('Messages pour la demande', inquiryId, ':', data);
     } catch (err) {
       setError(err.message);
-      console.error('Error fetching messages:', err);
+      console.error('Erreur lors de la récupération des messages:', err);
     }
   };
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedInquiry || !token) {
-      setError('Message, inquiry, or authentication token is missing');
+      setError('Message, demande ou jeton d\'authentification manquant');
       return;
     }
 
@@ -110,23 +112,23 @@ function Chat({ refresh, onRefreshComplete }) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to send message: ${response.status} - ${errorText}`);
+        throw new Error(`Échec d'envoi du message: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Message sent successfully:', data);
+      console.log('Message envoyé avec succès:', data);
       setNewMessage('');
       setError(null);
       await fetchMessages(selectedInquiry.id);
     } catch (err) {
       setError(err.message);
-      console.error('Error sending message:', err);
+      console.error('Erreur lors de l\'envoi du message:', err);
     }
   };
 
   const shouldAlignRight = (message) => {
     if (!selectedInquiry || !currentUserId) {
-      console.log('Missing data - selectedInquiry:', selectedInquiry, 'currentUserId:', currentUserId);
+      console.log('Données manquantes - selectedInquiry:', selectedInquiry, 'currentUserId:', currentUserId);
       return false;
     }
     const shouldAlign = message.message_type === 'self';
@@ -142,7 +144,7 @@ function Chat({ refresh, onRefreshComplete }) {
 
   const handleDeleteInquiry = async (inquiryId, e) => {
     e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this conversation?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette conversation?')) {
       return;
     }
     try {
@@ -154,26 +156,32 @@ function Chat({ refresh, onRefreshComplete }) {
       });
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Failed to delete conversation: ${response.status} - ${errorText}`);
+        throw new Error(`Échec de suppression de la conversation: ${response.status} - ${errorText}`);
       }
       setInquiries(inquiries.filter(inquiry => inquiry.id !== inquiryId));
       if (selectedInquiry && selectedInquiry.id === inquiryId) {
         setSelectedInquiry(null);
         setMessages([]);
       }
-      console.log('Conversation deleted successfully');
+      console.log('Conversation supprimée avec succès');
     } catch (err) {
       setError(err.message);
-      console.error('Error deleting conversation:', err);
+      console.error('Erreur lors de la suppression de la conversation:', err);
     }
   };
 
-  // Check if an inquiry has unread messages
   const hasUnreadMessages = (inquiryId) => {
     if (!selectedInquiry || selectedInquiry.id !== inquiryId) {
-      return false; // Only check unread messages for unselected inquiries
+      return false;
     }
     return messages.some(msg => msg.sender_id !== currentUserId && !msg.is_read);
+  };
+
+  // Function to navigate to the property listing page
+  const handleTitleClick = () => {
+    if (selectedInquiry && selectedInquiry.property_id) {
+      navigate(`/listing/${selectedInquiry.property_id}`);
+    }
   };
 
   return (
@@ -185,7 +193,7 @@ function Chat({ refresh, onRefreshComplete }) {
           {error && <div className="alert alert-danger">{error}</div>}
           {inquiries.length === 0 && !error ? (
             <div className="text-muted small">
-              <p>No conversations. Send a message from a listing to get started.</p>
+              <p>Aucune conversation. Envoyez un message depuis une annonce pour commencer.</p>
             </div>
           ) : (
             <ul className="list-group">
@@ -201,7 +209,7 @@ function Chat({ refresh, onRefreshComplete }) {
                   <div className="d-flex justify-content-between align-items-start">
                     <div>
                       <strong>
-                        {inquiry.property_title || `Inquiry #${inquiry.id}`}
+                        {inquiry.property_title || `Demande #${inquiry.id}`}
                         {inquiry.agent_name ? ` - ${inquiry.agent_name}` : ''}
                       </strong>
                       <br />
@@ -213,7 +221,7 @@ function Chat({ refresh, onRefreshComplete }) {
                       className="btn btn-sm btn-outline-danger" 
                       onClick={(e) => handleDeleteInquiry(inquiry.id, e)}
                       style={{ marginLeft: '8px' }}
-                      title="Delete conversation"
+                      title="Supprimer la conversation"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -243,13 +251,17 @@ function Chat({ refresh, onRefreshComplete }) {
           {!selectedInquiry ? (
             <div className="text-center mt-5">
               <MessageSquare size={48} className="text-muted mb-3" />
-              <h4>No Conversation Selected</h4>
-              <p className="text-muted mb-4">Select an inquiry to view or start a conversation</p>
+              <h4>Aucune Conversation Sélectionnée</h4>
+              <p className="text-muted mb-4">Sélectionnez une demande pour voir ou démarrer une conversation</p>
             </div>
           ) : (
             <div>
-              <h5 className="mb-3">
-                {selectedInquiry.property_title || `Inquiry #${selectedInquiry.id}`}
+              <h5 
+                className="mb-3" 
+                onClick={handleTitleClick} 
+                style={{ cursor: 'pointer', color: '#007bff', textDecoration: 'underline' }}
+              >
+                {selectedInquiry.property_title || `Demande #${selectedInquiry.id}`}
                 {selectedInquiry.agent_name ? ` - ${selectedInquiry.agent_name}` : ''}
               </h5>
               <div 
@@ -299,7 +311,7 @@ function Chat({ refresh, onRefreshComplete }) {
                         marginTop: '4px'
                       }}>
                         {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                        {msg.is_read ? ' (Read)' : ' (Unread)'}
+                        {msg.is_read ? ' (Lu)' : ' (Non lu)'}
                       </div>
                     </div>
                   </div>
@@ -311,13 +323,13 @@ function Chat({ refresh, onRefreshComplete }) {
                   className="form-control"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your message..."
+                  placeholder="Tapez votre message..."
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') handleSendMessage();
                   }}
                 />
                 <button className="btn btn-primary" onClick={handleSendMessage}>
-                  Send
+                  Envoyer
                 </button>
               </div>
             </div>

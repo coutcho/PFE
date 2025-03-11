@@ -1,11 +1,15 @@
+// src/App.jsx
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from "jwt-decode";
+import { FavoritesProvider } from './Components/Body/FavoritesContext';
 import Navbar from './Components/Navbar/Navbar';
 import SearchBar from './Components/Navbar/Searchbar';
 import AuthCallback from './Components/Navbar/AuthCallback';
 import Chat from './Components/Chat/Chat';
-import Profile from './Components/Navbar/Profile'; // Add this import
+import Profile from './Components/Navbar/Profile';
+import FavoritesPage from './Components/Navbar/FavoritesListings';
+import Contact from './Components/Navbar/Contact'; // Import Contact component
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
@@ -16,7 +20,21 @@ import ListingPage from './Components/ListingPage/ListingPage';
 import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
 import AdminPage from "./Components/Admin/AdminPage";
 
-// PrivateRoute component to protect admin routes
+// AuthenticatedRoute
+function AuthenticatedRoute({ children }) {
+  const token = localStorage.getItem("authToken");
+  if (!token) return <Navigate to="/" replace />;
+  try {
+    jwtDecode(token);
+    return children;
+  } catch (error) {
+    console.error("Invalid token:", error);
+    localStorage.removeItem("authToken");
+    return <Navigate to="/" replace />;
+  }
+}
+
+// PrivateRoute
 function PrivateRoute({ children }) {
   const token = localStorage.getItem("authToken");
   if (!token) return <Navigate to="/" replace />;
@@ -30,11 +48,10 @@ function PrivateRoute({ children }) {
   }
 }
 
-// Wrapper component to handle conditional Navbar rendering
+// Layout component
 function Layout({ children, onSignInTrigger }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-
   return (
     <>
       {!isAdminRoute && <Navbar onSignInTrigger={onSignInTrigger} />}
@@ -48,104 +65,116 @@ export default function App() {
   const [openSignIn, setOpenSignIn] = useState(null);
 
   return (
-    <Router>
-      <Routes>
-        {/* Home Route */}
-        <Route
-          path="/"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <div className="min-h-screen flex flex-col justify-center items-center text-center">
-                <main className="w-full max-w-7xl p-4">
-                  <h1 className="text-4xl font-bold mb-6">Rechercher où habiter!</h1>
-                </main>
-                <SearchBar />
-              </div>
-              <div className="bg-light bg-gray-100">
-                <PropertyListings />
-              </div>
-              <Footer />
-            </Layout>
-          }
-        />
-        {/* All Listings Route */}
-        <Route
-          path="/listings"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <AllListings />
-              <Footer />
-            </Layout>
-          }
-        />
-        {/* Listing Page Route */}
-        <Route
-          path="/listing/:id"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <ListingPage />
-            </Layout>
-          }
-        />
-        {/* Inbox Route */}
-        <Route
-          path="/inbox"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <Chat />
-              <Footer />
-            </Layout>
-          }
-        />
-        {/* Profile Route */}
-        <Route
-          path="/profile"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <Profile />
-              <Footer />
-            </Layout>
-          }
-        />
-        {/* Admin Route with Nested Sub-Routes */}
-        <Route
-          path="/admin/*"
-          element={
-            <PrivateRoute>
-              <AdminPage />
-            </PrivateRoute>
-          }
-        />
-        {/* Reset Password Route */}
-        <Route
-          path="/reset-password"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <ResetPasswordModal
-                show={true}
-                onClose={() => window.history.pushState({}, "", "/")}
-                onSignInClick={() => {
-                  if (openSignIn) openSignIn();
-                }}
-              />
-            </Layout>
-          }
-        />
-        {/* Auth Callback Route */}
-        <Route
-          path="/auth/callback"
-          element={<AuthCallback />}
-        />
-        {/* Catch-All Route for Undefined Paths */}
-        <Route
-          path="*"
-          element={
-            <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
-              <Navigate to="/" replace />
-            </Layout>
-          }
-        />
-      </Routes>
-    </Router>
+    <FavoritesProvider>
+      <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <div className="min-h-screen flex flex-col justify-center items-center text-center">
+                  <main className="w-full max-w-7xl p-4">
+                    <h1 className="text-4xl font-bold mb-6">Rechercher où habiter!</h1>
+                  </main>
+                  <SearchBar />
+                </div>
+                <div className="bg-light bg-gray-100">
+                  <PropertyListings />
+                </div>
+                <Footer />
+              </Layout>
+            }
+          />
+          <Route
+            path="/listings"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <AllListings />
+              </Layout>
+            }
+          />
+          <Route
+            path="/listing/:id"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <ListingPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <AuthenticatedRoute>
+                <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                  <FavoritesPage />
+                  <Footer />
+                </Layout>
+              </AuthenticatedRoute>
+            }
+          />
+          <Route
+            path="/inbox"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <Chat />
+                <Footer />
+              </Layout>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <Profile />
+                <Footer />
+              </Layout>
+            }
+          />
+          <Route
+            path="/contact" // New Contact route
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <Contact />
+                <Footer />
+              </Layout>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <PrivateRoute>
+                <AdminPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <ResetPasswordModal
+                  show={true}
+                  onClose={() => window.history.pushState({}, "", "/")}
+                  onSignInClick={() => {
+                    if (openSignIn) openSignIn();
+                  }}
+                />
+              </Layout>
+            }
+          />
+          <Route
+            path="/auth/callback"
+            element={<AuthCallback />}
+          />
+          <Route
+            path="*"
+            element={
+              <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
+                <Navigate to="/" replace />
+              </Layout>
+            }
+          />
+        </Routes>
+      </Router>
+    </FavoritesProvider>
   );
 }
