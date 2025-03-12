@@ -200,9 +200,9 @@ function AllListings() {
               Error: {error}
             </div>
           ) : properties.length === 0 ? (
-            <div className="alert alert-info m-3" role="alert">
+            <p className="mt-3">
               No properties found.
-            </div>
+            </p>
           ) : (
             <Stacked
               properties={properties}

@@ -141,7 +141,7 @@ export default function Navbar() {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Louer ou Acheter
+                Louer & Acheter
               </a>
               <ul className="dropdown-menu">
                 <li>

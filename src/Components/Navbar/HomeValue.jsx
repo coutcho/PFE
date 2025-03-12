@@ -5,6 +5,7 @@ function HomeValueHero() {
   const [address, setAddress] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
+  const [feedback, setFeedback] = useState({ show: false, message: '', type: '' });
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
@@ -13,19 +14,41 @@ function HomeValueHero() {
     setIsAuthenticated(!!localStorage.getItem('authToken'));
   }, []);
 
+  // Auto-hide feedback after 5 seconds
+  useEffect(() => {
+    let timer;
+    if (feedback.show) {
+      timer = setTimeout(() => {
+        setFeedback({ ...feedback, show: false });
+      }, 5000);
+    }
+    return () => clearTimeout(timer);
+  }, [feedback]);
+
+  const showFeedback = (message, type = 'error') => {
+    setFeedback({
+      show: true,
+      message,
+      type
+    });
+    
+    // Scroll to feedback if necessary
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Check if user is authenticated
     if (!isAuthenticated) {
-      alert('Please sign in to submit a home value request.');
-      navigate('/'); // Redirect to login page (adjust path as needed)
+      showFeedback('Please sign in to submit a home value request.');
+      setTimeout(() => navigate('/'), 2000); // Delay redirect for 2 seconds
       return;
     }
 
     // Check if address is provided
     if (!address.trim()) {
-      alert('Please enter an address.');
+      showFeedback('Please enter an address.');
       return;
     }
 
@@ -52,7 +75,7 @@ function HomeValueHero() {
 
       const data = await response.json();
       console.log('Server response:', data);
-      alert('Home value request submitted successfully! Experts will review it.');
+      showFeedback('Home value request submitted successfully! Experts will review it.', 'success');
       
       // Reset form
       setAddress('');
@@ -60,10 +83,10 @@ function HomeValueHero() {
       fileInputRef.current.value = null; // Clear file input
 
       // Optional: Navigate to inbox
-      // navigate('/inbox');
+      // setTimeout(() => navigate('/inbox'), 2000);
     } catch (error) {
       console.error('Error submitting home value:', error);
-      alert(`Failed to submit home value request: ${error.message}`);
+      showFeedback(`Failed to submit home value request: ${error.message}`);
     }
   };
 
@@ -82,10 +105,41 @@ function HomeValueHero() {
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     minHeight: '80vh',
+    position: 'relative', // For positioning the feedback
   };
 
   return (
     <div style={heroStyle} className="d-flex align-items-center">
+      {feedback.show && (
+        <div 
+          className={`position-absolute top-0 start-50 translate-middle-x mt-4 alert ${
+            feedback.type === 'success' ? 'alert-success' : 'alert-danger'
+          } d-flex align-items-center shadow-lg border-0 fade show`}
+          style={{ 
+            zIndex: 1050, 
+            maxWidth: '90%',
+            width: '500px',
+            padding: '16px 20px',
+            borderRadius: '8px',
+            animation: 'fadeIn 0.3s ease-in-out',
+          }}
+          role="alert"
+        >
+          <div className="d-flex justify-content-between align-items-center w-100">
+            <div>
+              <i className={`bi ${feedback.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2`}></i>
+              {feedback.message}
+            </div>
+            <button 
+              type="button" 
+              className="btn-close"
+              onClick={() => setFeedback({ ...feedback, show: false })}
+              aria-label="Close"
+            ></button>
+          </div>
+        </div>
+      )}
+      
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-12 col-md-10 col-lg-8 text-center text-white">
@@ -151,6 +205,14 @@ function HomeValueHero() {
           </div>
         </div>
       </div>
+      
+      {/* Add some CSS for the fade-in animation */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translate(-50%, -20px); }
+          to { opacity: 1; transform: translate(-50%, 0); }
+        }
+      `}</style>
     </div>
   );
 }
