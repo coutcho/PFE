@@ -1,6 +1,8 @@
 import express from 'express';
 import pkg from 'pg';
 import jwt from 'jsonwebtoken';
+import multer from 'multer';
+import path from 'path';
 
 const router = express.Router();
 const { Pool } = pkg;
@@ -12,6 +14,26 @@ const pool = new Pool({
   password: 'Rayan123',
   port: 5432,
 });
+
+// Multer configuration for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'), false);
+    }
+    cb(null, true);
+  },
+}).array('images', 10);
 
 // Authentication middleware
 const authenticateToken = (req, res, next) => {
@@ -43,10 +65,8 @@ router.post('/', authenticateToken, async (req, res) => {
   const status = 'pending';
 
   try {
-    // Start a transaction to ensure atomicity
     await pool.query('BEGIN');
 
-    // Insert the inquiry
     const inquiryResult = await pool.query(
       `INSERT INTO inquiries (property_id, user_id, agent_id, full_name, email, phone, message, tour_date, tour_time, avec_vtc, created_at, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11)
@@ -68,7 +88,6 @@ router.post('/', authenticateToken, async (req, res) => {
 
     const newInquiry = inquiryResult.rows[0];
 
-    // Insert the inquiry's message into the messages table
     const messageResult = await pool.query(
       `INSERT INTO messages (inquiry_id, sender_id, message, created_at)
        VALUES ($1, $2, $3, NOW())
@@ -79,12 +98,10 @@ router.post('/', authenticateToken, async (req, res) => {
     console.log('Inserted inquiry:', newInquiry);
     console.log('Inserted initial message:', messageResult.rows[0]);
 
-    // Commit the transaction
     await pool.query('COMMIT');
 
     res.status(201).json(newInquiry);
   } catch (err) {
-    // Rollback the transaction on error
     await pool.query('ROLLBACK');
     console.error('Error saving inquiry:', err);
     if (err.code === '23503') {
@@ -94,14 +111,16 @@ router.post('/', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/inquiries/:id/messages - Send a message
-router.post('/:id/messages', authenticateToken, async (req, res) => {
+// POST /api/inquiries/:id/messages - Send a message with optional images
+router.post('/:id/messages', authenticateToken, upload, async (req, res) => {
   const { id } = req.params; // inquiry_id
-  const { message } = req.body;
+  const { message } = req.body; // Text message from FormData
   const sender_id = req.user.id;
+  const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
+  // Allow empty message if images are present
+  if (!message && images.length === 0) {
+    return res.status(400).json({ error: 'Message or images required' });
   }
 
   try {
@@ -118,12 +137,12 @@ router.post('/:id/messages', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to send message' });
     }
 
-    // Insert message
+    // Insert message with images
     const messageResult = await pool.query(
-      `INSERT INTO messages (inquiry_id, sender_id, message, created_at)
-       VALUES ($1, $2, $3, NOW())
+      `INSERT INTO messages (inquiry_id, sender_id, message, images, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
        RETURNING *`,
-      [id, sender_id, message]
+      [id, sender_id, message || '', JSON.stringify(images)]
     );
 
     // Update inquiry status to 'in_progress' if agent responds
@@ -166,6 +185,7 @@ router.get('/:id/messages', authenticateToken, async (req, res) => {
         m.inquiry_id, 
         m.sender_id, 
         m.message, 
+        m.images,
         m.created_at, 
         m.is_read,
         CASE 
@@ -227,7 +247,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
   try {
-    // Check if inquiry exists and user is authorized
     const inquiryResult = await pool.query(
       'SELECT user_id, agent_id FROM inquiries WHERE id = $1',
       [id]
@@ -240,13 +259,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized to delete inquiry' });
     }
 
-    // Delete associated messages first (due to foreign key constraint)
-    await pool.query(
-      'DELETE FROM messages WHERE inquiry_id = $1',
-      [id]
-    );
+    await pool.query('DELETE FROM messages WHERE inquiry_id = $1', [id]);
 
-    // Delete the inquiry
     const deleteResult = await pool.query(
       'DELETE FROM inquiries WHERE id = $1 RETURNING *',
       [id]
@@ -287,7 +301,7 @@ router.get('/user/inquiries', authenticateToken, async (req, res) => {
   }
 });
 
-
+// GET /api/inquiries/user/unread-count - Fetch unread message count
 router.get('/user/unread-count', authenticateToken, async (req, res) => {
   const user_id = req.user.id;
 
@@ -309,6 +323,5 @@ router.get('/user/unread-count', authenticateToken, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 export default router;

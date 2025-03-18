@@ -25,3 +25,25 @@
   border-color: #ff5a1f;
   color: white;
 }
+
+.carousel-container {
+  width: 100%;
+}
+
+.carousel-track {
+  flex-wrap: nowrap;
+}
+
+.carousel-btn {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.carousel-btn:hover {
+  opacity: 1.2;
+}
+
+.carousel-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

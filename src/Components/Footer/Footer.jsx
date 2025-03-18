@@ -3,7 +3,7 @@ import { FaTwitter, FaInstagram, FaFacebook } from "react-icons/fa";
 export default function Footer() {
     return (
         <div className="container">
-      <footer className="py-5">
+      <footer className="ft py-5 mt-5">
         <div className="row">
           {/* First Column */}
           <div className="col-6 col-md-2 mb-3">

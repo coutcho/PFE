@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { MessageSquare, Trash2, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageSquare, Trash2, Check, Image, X, Maximize2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import './ChatCSS.css';
@@ -15,11 +15,19 @@ function Chat({ refresh, onRefreshComplete }) {
   const [userRole, setUserRole] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [messageImages, setMessageImages] = useState([]);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const fileInputRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const token = localStorage.getItem('authToken');
   const navigate = useNavigate();
   const API_INQUIRIES_URL = 'http://localhost:3001/api/inquiries';
   const API_USERS_URL = 'http://localhost:3001/api/users';
   const API_HOME_VALUES_URL = 'http://localhost:3001/api/home-values';
+
+  // Calculate visible items for carousel
+  const itemsPerView = 3;
+  const maxIndex = Math.max(0, selectedItem?.images?.length - itemsPerView) || 0;
 
   useEffect(() => {
     if (token) {
@@ -42,10 +50,17 @@ function Chat({ refresh, onRefreshComplete }) {
   useEffect(() => {
     if (selectedItem) {
       fetchMessages(selectedItem.id, selectedItem.type);
+      setCarouselIndex(0); // Reset carousel when changing items
     } else {
       setMessages([]);
     }
   }, [selectedItem]);
+
+  useEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const fetchCurrentUser = async () => {
     setIsLoading(true);
@@ -110,8 +125,8 @@ function Chat({ refresh, onRefreshComplete }) {
   const fetchMessages = async (itemId, itemType) => {
     setIsLoading(true);
     try {
-      const url = itemType === 'inquiry' 
-        ? `${API_INQUIRIES_URL}/${itemId}/messages` 
+      const url = itemType === 'inquiry'
+        ? `${API_INQUIRIES_URL}/${itemId}/messages`
         : `${API_HOME_VALUES_URL}/${itemId}/messages`;
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` },
@@ -133,23 +148,36 @@ function Chat({ refresh, onRefreshComplete }) {
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !selectedItem) return;
+    if ((!newMessage.trim() && messageImages.length === 0) || !selectedItem) return;
 
     setIsLoading(true);
     try {
-      const url = selectedItem.type === 'inquiry' 
-        ? `${API_INQUIRIES_URL}/${selectedItem.id}/messages` 
+      const url = selectedItem.type === 'inquiry'
+        ? `${API_INQUIRIES_URL}/${selectedItem.id}/messages`
         : `${API_HOME_VALUES_URL}/${selectedItem.id}/messages`;
+
+      const formData = new FormData();
+      formData.append('message', newMessage);
+      messageImages.forEach((image, index) => {
+        formData.append('images', image);
+      });
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: newMessage }),
+        body: formData,
       });
-      if (!response.ok) throw new Error('Failed to send message');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server error:', response.status, errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to send message');
+      }
+
       setNewMessage('');
+      setMessageImages([]);
       await fetchMessages(selectedItem.id, selectedItem.type);
     } catch (err) {
       setError(err.message);
@@ -185,26 +213,21 @@ function Chat({ refresh, onRefreshComplete }) {
 
   const handleDeleteInquiry = async (itemId, type, e) => {
     e.stopPropagation();
-    
-    // For home_value, check if user owns it or is an expert with the right permission
+
     if (type === 'home_value') {
       const homeValue = homeValues.find(item => item.id === itemId);
-      
-      // Expert can only delete if they're assigned to it
       if (userRole === 'expert' && homeValue.expert_id !== currentUserId) {
         alert('Only the assigned expert can delete this home value request.');
         return;
       }
-      
-      // Regular user can only delete their own requests
       if (userRole !== 'expert' && homeValue.user_id !== currentUserId) {
         alert('You can only delete your own home value requests.');
         return;
       }
     }
-    
+
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet élément?')) return;
-    
+
     setIsLoading(true);
     try {
       const url = type === 'inquiry' ? `${API_INQUIRIES_URL}/${itemId}` : `${API_HOME_VALUES_URL}/${itemId}`;
@@ -244,22 +267,39 @@ function Chat({ refresh, onRefreshComplete }) {
     setSelectedImage(imageUrl);
   };
 
+  const handleRemoveImage = (index) => {
+    const updatedMessageImages = [...messageImages];
+    updatedMessageImages.splice(index, 1);
+    setMessageImages(updatedMessageImages);
+  };
+
   const handleCloseImage = () => {
     setSelectedImage(null);
   };
 
-  // Helper function to determine if user can delete a home value request
+  const handleImageUploadClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleImageSelect = (e) => {
+    if (e.target.files) {
+      const newImages = Array.from(e.target.files);
+      setMessageImages([...messageImages, ...newImages]);
+    }
+  };
+
   const canDeleteHomeValue = (item) => {
-    // Expert can delete if they're assigned to it
     if (userRole === 'expert' && item.expert_id === currentUserId) return true;
-    
-    // User can delete their own requests
     if (item.user_id === currentUserId) return true;
-    
     return false;
   };
 
   const combinedItems = [...inquiries, ...homeValues];
+
+  const getImageCountLabel = (images) => {
+    if (!images || images.length === 0) return '';
+    return images.length === 1 ? '1 image' : `${images.length} images`;
+  };
 
   return (
     <div className="container-fluid">
@@ -300,8 +340,6 @@ function Chat({ refresh, onRefreshComplete }) {
                           <Check size={16} />
                         </button>
                       )}
-                      
-                      {/* Delete button for home_value - for both experts (assigned) and users (own requests) */}
                       {item.type === 'home_value' && canDeleteHomeValue(item) && (
                         <button
                           className="btn btn-sm btn-outline-danger"
@@ -311,8 +349,6 @@ function Chat({ refresh, onRefreshComplete }) {
                           <Trash2 size={16} />
                         </button>
                       )}
-                      
-                      {/* Delete button for inquiries */}
                       {item.type === 'inquiry' && (item.role === 'user' || item.role === 'agent') && (
                         <button
                           className="btn btn-sm btn-outline-danger"
@@ -358,64 +394,354 @@ function Chat({ refresh, onRefreshComplete }) {
                     : `Estimation: ${selectedItem.address}`}
                   {selectedItem.type === 'home_value' && selectedItem.expert_id ? ' (Réservée)' : ''}
                 </h5>
+
                 {selectedItem.images && selectedItem.images.length > 0 && (
-                  <div className="mb-3">
-                    <h6>Images:</h6>
-                    <div className="d-flex flex-wrap gap-2">
-                      {selectedItem.images.map((img, index) => (
-                        <img
-                          key={index}
-                          src={`http://localhost:3001${img}`}
-                          alt={`Image ${index + 1}`}
-                          style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'cover', cursor: 'pointer' }}
-                          onClick={() => handleImageClick(`http://localhost:3001${img}`)}
-                        />
-                      ))}
+                  <div className="mb-4">
+                    <h6 className="mb-2">Images du bien:</h6>
+                    <div
+                      className="property-images-gallery p-2 position-relative"
+                      style={{
+                        backgroundColor: '#f0f2f5',
+                        borderRadius: '12px',
+                      }}
+                    >
+                      <div
+                        className="carousel-container"
+                        style={{
+                          overflowX: selectedItem.images.length > 3 ? 'hidden' : 'visible',
+                          overflowY: 'hidden',
+                          position: 'relative',
+                        }}
+                      >
+                        <div
+                          className="carousel-track"
+                          style={{
+                            display: 'flex',
+                            gap: '10px',
+                            transition: 'transform 0.3s ease',
+                            transform: `translateX(-${carouselIndex * (120 + 10)}px)`,
+                          }}
+                        >
+                          {selectedItem.images.map((img, index) => (
+                            <div
+                              key={index}
+                              className="image-thumbnail"
+                              style={{
+                                height: '100px',
+                                minWidth: '120px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                borderRadius: '8px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() => handleImageClick(`http://localhost:3001${img}`)}
+                              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                              <img
+                                src={`http://localhost:3001${img}`}
+                                alt={`Image ${index + 1}`}
+                                style={{
+                                  width: '120px',
+                                  height: '120px',
+                                  objectFit: 'cover',
+                                }}
+                              />
+                              <div
+                                className="image-overlay"
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '0',
+                                  left: '0',
+                                  right: '0',
+                                  padding: '4px 8px',
+                                  backgroundColor: 'rgba(0,0,0,0.5)',
+                                  color: 'white',
+                                  fontSize: '12px',
+                                  textAlign: 'center',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Maximize2 size={12} style={{ marginRight: '4px' }} />
+                                <span>Agrandir</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {selectedItem.images.length > 3 && (
+                        <>
+                          <button
+                            className="carousel-btn carousel-btn-left"
+                            onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
+                            disabled={carouselIndex === 0}
+                            style={{
+                              position: 'absolute',
+                              left: '0',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'rgba(0,0,0,0.5)',
+                              border: 'none',
+                              color: 'white',
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              cursor: 'pointer',
+                              zIndex: 1,
+                            }}
+                          >
+                            &lt;
+                          </button>
+                          <button
+                            className="carousel-btn carousel-btn-right"
+                            onClick={() => setCarouselIndex(Math.min(maxIndex, carouselIndex + 1))}
+                            disabled={carouselIndex === maxIndex}
+                            style={{
+                              position: 'absolute',
+                              right: '0',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              background: 'rgba(0,0,0,0.5)',
+                              border: 'none',
+                              color: 'white',
+                              width: '30px',
+                              height: '30px',
+                              borderRadius: '50%',
+                              cursor: 'pointer',
+                              zIndex: 1,
+                            }}
+                          >
+                            &gt;
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
-                <div className="chat-messages p-3" style={{ maxHeight: '400px', overflowY: 'auto', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
+
+                <div
+                  ref={messagesContainerRef}
+                  className="chat-messages p-3"
+                  style={{
+                    height: '350px',
+                    overflowY: 'auto',
+                    backgroundColor: '#f8f9fa',
+                    borderRadius: '12px',
+                    boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.05)',
+                    padding: '16px'
+                  }}
+                >
                   {messages.length === 0 && !isLoading ? (
-                    <p className="text-muted">Aucun message pour cet élément.</p>
+                    <div className="text-center mt-5">
+                      <MessageSquare size={32} className="text-muted mb-2" />
+                      <p className="text-muted">Aucun message pour cet élément.</p>
+                    </div>
                   ) : (
                     messages.map((msg) => (
-                      <div key={msg.id} style={{ width: '100%', marginBottom: '16px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: shouldAlignRight(msg) ? 'flex-end' : 'flex-start' }}>
+                      <div key={msg.id} style={{ width: '100%', marginBottom: '18px' }}>
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: shouldAlignRight(msg) ? 'flex-end' : 'flex-start'
+                        }}>
                           <div
                             style={{
-                              backgroundColor: shouldAlignRight(msg) ? '#007bff' : '#f8f9fa',
+                              backgroundColor: shouldAlignRight(msg)
+                                ? '#007bff'
+                                : '#ffffff',
                               color: shouldAlignRight(msg) ? 'white' : 'black',
-                              padding: '8px 12px',
+                              padding: '12px 16px',
                               borderRadius: shouldAlignRight(msg) ? '18px 18px 0 18px' : '18px 18px 18px 0',
-                              maxWidth: '70%',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                              border: shouldAlignRight(msg) ? 'none' : '1px solid #dee2e6',
+                              maxWidth: '75%',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+                              border: shouldAlignRight(msg)
+                                ? 'none'
+                                : '1px solid #f0f0f0',
+                              wordBreak: 'break-word',
+                              opacity: 1,
+                              position: 'relative',
+                              overflow: 'hidden'
                             }}
                           >
-                            {msg.message}
+                            {msg.message && <div style={{ marginBottom: msg.images && msg.images.length > 0 ? '12px' : '0' }}>{msg.message}</div>}
+                            {msg.images && msg.images.length > 0 && (
+                              <div
+                                className="message-images"
+                                style={{
+                                  marginTop: msg.message ? '8px' : '0'
+                                }}
+                              >
+                                <div style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  marginBottom: '8px',
+                                  fontSize: '12px',
+                                  color: shouldAlignRight(msg) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)'
+                                }}>
+                                  <Image size={14} style={{ marginRight: '4px' }} />
+                                  <span>{getImageCountLabel(msg.images)}</span>
+                                </div>
+                                <div
+                                  className="images-grid"
+                                  style={{
+                                    display: 'grid',
+                                    gap: '4px',
+                                    gridTemplateColumns: msg.images.length === 1 ? '1fr' :
+                                                        msg.images.length === 2 ? '1fr 1fr' :
+                                                        'repeat(auto-fill, minmax(100px, 1fr))',
+                                    maxWidth: '100%'
+                                  }}
+                                >
+                                  {msg.images.map((img, index) => (
+                                    <div
+                                      key={index}
+                                      style={{
+                                        position: 'relative',
+                                        borderRadius: '8px',
+                                        overflow: 'hidden',
+                                        border: `2px solid ${shouldAlignRight(msg) ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)'}`,
+                                        height: msg.images.length <= 2 ? '180px' : '120px'
+                                      }}
+                                      onClick={() => handleImageClick(`http://localhost:3001${img}`)}
+                                    >
+                                      <img
+                                        src={`http://localhost:3001${img}`}
+                                        alt={`Message Image ${index + 1}`}
+                                        style={{
+                                          width: '100%',
+                                          height: '100%',
+                                          objectFit: 'cover',
+                                          cursor: 'pointer',
+                                          transition: 'transform 0.3s ease'
+                                        }}
+                                      />
+                                      <div
+                                        className="expand-overlay"
+                                        style={{
+                                          position: 'absolute',
+                                          inset: '0',
+                                          backgroundColor: 'rgba(0,0,0,0.3)',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          opacity: '0',
+                                          transition: 'opacity 0.2s ease',
+                                          cursor: 'pointer'
+                                        }}
+                                        onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+                                        onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+                                      >
+                                        <Maximize2 size={24} color="white" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.75rem', color: '#6c757d', marginTop: '4px' }}>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6c757d',
+                            marginTop: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
                             {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                            {msg.is_read ? ' (Lu)' : ' (Non lu)'}
+                            <span style={{
+                              display: 'inline-block',
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '50%',
+                              backgroundColor: msg.is_read ? '#28a745' : '#f8f9fa',
+                              border: `1px solid ${msg.is_read ? '#28a745' : '#6c757d'}`,
+                              marginLeft: '4px'
+                            }}></span>
+                            <span style={{ fontSize: '0.7rem' }}>{msg.is_read ? 'Lu' : 'Non lu'}</span>
                           </div>
                         </div>
                       </div>
                     ))
                   )}
                 </div>
-                <div className="input-group mt-3">
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Tapez votre message..."
-                    onKeyPress={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-                    disabled={isLoading}
-                  />
-                  <button className="btn btn-primary" onClick={handleSendMessage} disabled={isLoading}>
-                    Envoyer
-                  </button>
+
+                <div className="message-input-container mt-3">
+                  {messageImages.length > 0 && (
+                    <div className="preview-images mb-2">
+                      {messageImages.map((image, index) => (
+                        <div key={index} className="preview-image-container" style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}>
+                          <img
+                            src={URL.createObjectURL(image)}
+                            alt={`Preview ${index}`}
+                            style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #ccc' }}
+                          />
+                          <button
+                            className="btn btn-sm btn-danger"
+                            style={{
+                              position: 'absolute',
+                              top: '-5px',
+                              right: '-5px',
+                              borderRadius: '50%',
+                              padding: '0.15rem',
+                              width: '20px',
+                              height: '20px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                            }}
+                            onClick={() => handleRemoveImage(index)}
+                          >
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="input-group input-group-sm shadow-sm rounded-pill bg-white overflow-hidden">
+                    <input
+                      type="text"
+                      className="form-control border-0 py-2 ps-3"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Tapez votre message..."
+                      onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(); }}
+                      disabled={isLoading}
+                    />
+                    <button
+                      className="btn btn-link text-muted border-0 px-3"
+                      type="button"
+                      onClick={handleImageUploadClick}
+                      disabled={isLoading}
+                      title="Ajouter des images"
+                    >
+                      <Image size={16} />
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="d-none"
+                      onChange={handleImageSelect}
+                      accept="image/*"
+                      multiple
+                    />
+                    <button
+                      className="btn btn-primary px-3 rounded-end"
+                      onClick={handleSendMessage}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                      ) : (
+                        'Envoyer'
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )
@@ -425,41 +751,36 @@ function Chat({ refresh, onRefreshComplete }) {
 
       {selectedImage && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
+          className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.9)', zIndex: 1050 }}
           onClick={handleCloseImage}
         >
           <img
             src={selectedImage}
             alt="Enlarged view"
-            style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }}
+            className="img-fluid rounded shadow"
+            style={{ maxWidth: '90%', maxHeight: '90%' }}
           />
           <button
             style={{
               position: 'absolute',
               top: '20px',
               right: '20px',
-              background: 'white',
+              background: 'rgba(255, 255, 255, 0.9)',
               border: 'none',
               borderRadius: '50%',
-              width: '30px',
-              height: '30px',
-              fontSize: '20px',
+              width: '40px',
+              height: '40px',
+              fontSize: '24px',
               cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
             }}
             onClick={handleCloseImage}
           >
-            ×
+            <X size={24} />
           </button>
         </div>
       )}

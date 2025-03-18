@@ -1,20 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 
 function HomeValueHero() {
   const [address, setAddress] = useState('');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
   const [feedback, setFeedback] = useState({ show: false, message: '', type: '' });
+  const [carouselIndex, setCarouselIndex] = useState(0);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  // Check authentication status on mount
+  // Carousel settings
+  const itemsPerView = 3; // Number of images visible at once
+  const maxIndex = Math.max(0, selectedFiles.length - itemsPerView);
+
   useEffect(() => {
     setIsAuthenticated(!!localStorage.getItem('authToken'));
   }, []);
 
-  // Auto-hide feedback after 5 seconds
   useEffect(() => {
     let timer;
     if (feedback.show) {
@@ -31,41 +35,36 @@ function HomeValueHero() {
       message,
       type
     });
-    
-    // Scroll to feedback if necessary
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Check if user is authenticated
     if (!isAuthenticated) {
       showFeedback('Please sign in to submit a home value request.');
-      setTimeout(() => navigate('/'), 2000); // Delay redirect for 2 seconds
+      setTimeout(() => navigate('/'), 2000);
       return;
     }
 
-    // Check if address is provided
     if (!address.trim()) {
       showFeedback('Please enter an address.');
       return;
     }
 
-    // Prepare FormData
     const formData = new FormData();
     formData.append('address', address);
     selectedFiles.forEach((file) => {
-      formData.append('images', file); // 'images' matches Multer's expected field name
+      formData.append('images', file);
     });
 
     try {
       const response = await fetch('http://localhost:3001/api/home-values', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Send auth token
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
         },
-        body: formData, // No Content-Type header needed; FormData sets it automatically
+        body: formData,
       });
 
       if (!response.ok) {
@@ -77,13 +76,10 @@ function HomeValueHero() {
       console.log('Server response:', data);
       showFeedback('Home value request submitted successfully! Experts will review it.', 'success');
       
-      // Reset form
       setAddress('');
       setSelectedFiles([]);
-      fileInputRef.current.value = null; // Clear file input
-
-      // Optional: Navigate to inbox
-      // setTimeout(() => navigate('/inbox'), 2000);
+      setCarouselIndex(0); // Reset carousel
+      fileInputRef.current.value = null;
     } catch (error) {
       console.error('Error submitting home value:', error);
       showFeedback(`Failed to submit home value request: ${error.message}`);
@@ -96,8 +92,16 @@ function HomeValueHero() {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setSelectedFiles(files);
+    setSelectedFiles(prevFiles => [...prevFiles, ...files]);
     console.log('Files selected:', files);
+  };
+
+  const handleRemoveImage = (index) => {
+    setSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
+    // Adjust carousel index if needed
+    if (carouselIndex > maxIndex - 1) {
+      setCarouselIndex(Math.max(0, maxIndex - 1));
+    }
   };
 
   const heroStyle = {
@@ -105,7 +109,7 @@ function HomeValueHero() {
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     minHeight: '80vh',
-    position: 'relative', // For positioning the feedback
+    position: 'relative',
   };
 
   return (
@@ -189,28 +193,139 @@ function HomeValueHero() {
               </div>
             </form>
 
-            {/* Display selected file names if any */}
+            {/* Image Previews with Carousel */}
             {selectedFiles.length > 0 && (
-              <div className="text-start bg-dark bg-opacity-50 p-2 rounded mb-3">
-                <p className="mb-1 text-white-50 small">Selected files:</p>
-                <div className="d-flex flex-wrap gap-2">
-                  {selectedFiles.map((file, index) => (
-                    <span key={index} className="badge bg-light text-dark">
-                      {file.name}
-                    </span>
-                  ))}
+              <div className="text-start bg-dark bg-opacity-50 p-3 rounded mb-3 position-relative">
+                <p className="mb-2 text-white-50 small">Selected Images:</p>
+                <div
+                  className="carousel-container"
+                  style={{
+                    overflowX: selectedFiles.length > itemsPerView ? 'hidden' : 'visible',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    className="carousel-track"
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      transition: 'transform 0.3s ease',
+                      transform: `translateX(-${carouselIndex * (100 + 10)}px)`, // 100px width + 10px gap
+                    }}
+                  >
+                    {selectedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="position-relative"
+                        style={{
+                          width: '100px',
+                          height: '100px',
+                        }}
+                      >
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${file.name}`}
+                          className="rounded"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            border: '2px solid rgba(255, 255, 255, 0.3)',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            padding: 0,
+                            borderRadius: '50%',
+                            transform: 'translate(50%, -50%)',
+                          }}
+                          onClick={() => handleRemoveImage(index)}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Carousel Navigation */}
+                {selectedFiles.length > itemsPerView && (
+                  <>
+                    <button
+                      className="carousel-btn carousel-btn-left"
+                      onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
+                      disabled={carouselIndex === 0}
+                      style={{
+                        position: 'absolute',
+                        left: '0',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(255,255,255,0.2)',
+                        border: 'none',
+                        color: 'white',
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        zIndex: 1,
+                      }}
+                    >
+                      &lt;
+                    </button>
+                    <button
+                      className="carousel-btn carousel-btn-right"
+                      onClick={() => setCarouselIndex(Math.min(maxIndex, carouselIndex + 1))}
+                      disabled={carouselIndex === maxIndex}
+                      style={{
+                        position: 'absolute',
+                        right: '0',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'rgba(255,255,255,0.2)',
+                        border: 'none',
+                        color: 'white',
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        zIndex: 1,
+                      }}
+                    >
+                      &gt;
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
       
-      {/* Add some CSS for the fade-in animation */}
       <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translate(-50%, -20px); }
           to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .carousel-container {
+          width: 100%;
+        }
+        .carousel-track {
+          flex-wrap: nowrap;
+        }
+        .carousel-btn {
+          opacity: 5;
+          transition: opacity 0.2s ease;
+        }
+        .carousel-btn:hover {
+          opacity: 1;
+        }
+        .carousel-btn:disabled {
+          opacity: 0.3;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

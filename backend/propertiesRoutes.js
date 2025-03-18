@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
     let query = `
       SELECT id, title, price, location, type, bedrooms, bathrooms, etage, 
              square_footage, description, features, status, lat, long, 
-             images_path, equipe AS equipped, user_id AS agent_id 
+             images_path, equipe AS equipped, user_id AS agent_id, created_at 
       FROM properties
     `;
     const values = [];
@@ -70,7 +70,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
-      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id FROM properties WHERE id = $1',
+      'SELECT id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id, created_at FROM properties WHERE id = $1',
       [id]
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Property not found' });
@@ -90,10 +90,10 @@ router.post('/', authenticateToken, upload, async (req, res) => {
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
     const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false;
-    const parsedAgentId = agent_id ? parseInt(agent_id) : null; // Parse agent_id or set to null if not provided
+    const parsedAgentId = agent_id ? parseInt(agent_id) : null;
 
     const result = await pool.query(
-      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id',
+      'INSERT INTO properties (title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id, created_at',
       [
         title,
         parseInt(price),
@@ -110,14 +110,14 @@ router.post('/', authenticateToken, upload, async (req, res) => {
         long ? parseFloat(long) : null,
         JSON.stringify(images_path),
         parsedEquipped,
-        parsedAgentId, // Add agent_id here
+        parsedAgentId,
       ]
     );
     console.log('Inserted property:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Error adding property:', err);
-    if (err.code === '23503') { // Foreign key violation
+    if (err.code === '23503') {
       return res.status(400).json({ error: 'Invalid agent ID: agent does not exist' });
     }
     res.status(500).json({ error: err.message });
@@ -140,13 +140,13 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
   const newImages = req.files && req.files.length > 0 ? req.files.map(file => `/uploads/${file.filename}`) : [];
   const updatedImagesPath = [...existingImages, ...newImages];
   const parsedEquipped = equipped === 'true' ? true : equipped === 'false' ? false : false;
-  const parsedAgentId = agent_id ? parseInt(agent_id) : null; // Parse agent_id or set to null if not provided
+  const parsedAgentId = agent_id ? parseInt(agent_id) : null;
 
   try {
     const parsedFeatures = typeof features === 'string' ? JSON.parse(features) : features;
 
     const result = await pool.query(
-      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, etage = $7, square_footage = $8, description = $9, features = $10, status = $11, lat = $12, long = $13, images_path = $14, equipe = $15, user_id = $16 WHERE id = $17 RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id',
+      'UPDATE properties SET title = $1, price = $2, location = $3, type = $4, bedrooms = $5, bathrooms = $6, etage = $7, square_footage = $8, description = $9, features = $10, status = $11, lat = $12, long = $13, images_path = $14, equipe = $15, user_id = $16 WHERE id = $17 RETURNING id, title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipe AS equipped, user_id AS agent_id, created_at',
       [
         title,
         parseInt(price),
@@ -163,7 +163,7 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
         long ? parseFloat(long) : null,
         JSON.stringify(updatedImagesPath),
         parsedEquipped,
-        parsedAgentId, // Add agent_id here
+        parsedAgentId,
         id,
       ]
     );
@@ -172,7 +172,7 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     console.error('Error updating property:', err);
-    if (err.code === '23503') { // Foreign key violation
+    if (err.code === '23503') {
       return res.status(400).json({ error: 'Invalid agent ID: agent does not exist' });
     }
     res.status(500).json({ error: err.message });

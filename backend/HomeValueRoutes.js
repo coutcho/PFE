@@ -10,10 +10,10 @@ const router = express.Router();
 const { Pool } = pkg;
 
 const pool = new Pool({
-  user: "postgres",
-  host: "localhost",
-  database: "DB_PFE",
-  password: "Rayan123",
+  user: 'postgres',
+  host: 'localhost',
+  database: 'DB_PFE',
+  password: 'Rayan123',
   port: 5432,
 });
 
@@ -26,9 +26,9 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
-const upload = multer({ 
+const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 200 * 1024 * 1024 }, // 10MB limit
   fileFilter: (req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
       return cb(new Error('Only image files are allowed'), false);
@@ -97,7 +97,6 @@ router.get('/user-and-expert', authenticateToken, async (req, res) => {
   try {
     let query;
     if (userRole === 'expert') {
-      // Experts see unassigned requests and their own assigned requests
       query = await pool.query(
         `SELECT hv.*, u.fullname AS user_name
          FROM home_values hv
@@ -107,7 +106,6 @@ router.get('/user-and-expert', authenticateToken, async (req, res) => {
         [userId]
       );
     } else {
-      // Regular users see only their own submitted requests
       query = await pool.query(
         `SELECT hv.*, u.fullname AS user_name
          FROM home_values hv
@@ -156,10 +154,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   const userRole = req.user.role;
 
   try {
-    // Start a transaction to ensure atomicity
     await pool.query('BEGIN');
 
-    // Check if the request exists and the user has permission to delete it
     const checkRequest = await pool.query(
       'SELECT user_id, expert_id FROM home_values WHERE id = $1',
       [id]
@@ -172,9 +168,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     
     const request = checkRequest.rows[0];
     
-    // Allow deletion if user is:
-    // 1. The owner of the request OR
-    // 2. An expert assigned to the request
     if (request.user_id !== userId && (userRole !== 'expert' || request.expert_id !== userId)) {
       await pool.query('ROLLBACK');
       return res.status(403).json({ 
@@ -182,17 +175,13 @@ router.delete('/:id', authenticateToken, async (req, res) => {
       });
     }
 
-    // Delete associated messages first
     await pool.query('DELETE FROM messages WHERE home_value_id = $1', [id]);
 
-    // Delete the home value request 
-    // Note: We've already verified permissions above, so we can use a simpler WHERE clause
     const result = await pool.query(
       'DELETE FROM home_values WHERE id = $1 RETURNING *',
       [id]
     );
 
-    // Commit the transaction
     await pool.query('COMMIT');
     res.status(204).send();
   } catch (error) {
@@ -239,15 +228,17 @@ router.get('/:id/messages', authenticateToken, async (req, res) => {
   }
 });
 
-// POST /api/home-values/:id/messages - Send a message for a home value request
-router.post('/:id/messages', authenticateToken, async (req, res) => {
+// POST /api/home-values/:id/messages - Send a message with optional images
+router.post('/:id/messages', authenticateToken, upload, async (req, res) => {
   const { id } = req.params;
   const { message } = req.body;
   const userId = req.user.id;
   const userRole = req.user.role;
+  const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
 
-  if (!message || !message.trim()) {
-    return res.status(400).json({ message: 'Message content is required' });
+  // Allow empty message if images are present
+  if (!message && images.length === 0) {
+    return res.status(400).json({ message: 'Message or images required' });
   }
 
   try {
@@ -267,8 +258,8 @@ router.post('/:id/messages', authenticateToken, async (req, res) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO messages (home_value_id, sender_id, message, created_at, is_read) VALUES ($1, $2, $3, NOW(), FALSE) RETURNING *',
-      [id, userId, message]
+      'INSERT INTO messages (home_value_id, sender_id, message, images, created_at, is_read) VALUES ($1, $2, $3, $4, NOW(), FALSE) RETURNING *',
+      [id, userId, message || '', JSON.stringify(images)]
     );
     res.status(201).json(result.rows[0]);
   } catch (error) {

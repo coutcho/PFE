@@ -13,6 +13,7 @@ import propertiesRoutes from './propertiesRoutes.js';
 import usersRoutes from './usersRoutes.js';
 import inquiriesRoutes from './inquiriesRoutes.js';
 import homeValuesRoutes from './HomeValueRoutes.js'
+import analyticsRoutes from './analyticsRoutes.js'
 
 const app = express();
 const port = 3001;
@@ -390,6 +391,7 @@ app.use('/api/properties', propertiesRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/inquiries', inquiriesRoutes);
 app.use('/api/home-values', homeValuesRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });

@@ -141,20 +141,46 @@ export default function Navbar() {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
               >
-                Louer & Acheter
+                Louer
               </a>
               <ul className="dropdown-menu">
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=appartement">
+                  <Link className="dropdown-item" to="/listings?type=appartement&engagement=location">
                     Appartement
                   </Link>
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=villa">
+                  <Link className="dropdown-item" to="/listings?type=villa&engagement=location">
                     Villa
                   </Link>
                 </li>
-                <li><a className="dropdown-item" href="/listings?type=bureau">Bureau</a></li>
+                <li><Link className="dropdown-item" to="/listings?type=bureau&engagement=location">Bureau</Link></li>
+              </ul>
+            </li>
+            <li className="nav-item dropdown">
+              <a
+                className="nav-link dropdown-toggle"
+                href="#"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                Acheter
+              </a>
+              <ul className="dropdown-menu">
+                <li>
+                  <Link className="dropdown-item" to="/listings?type=appartement&engagement=achat">
+                    Appartement
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/listings?type=villa&engagement=achat">
+                    Villa
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/listings?type=bureau&engagement=achat">
+                  Bureau
+                  </Link></li>
               </ul>
             </li>
             <li className="nav-item">
