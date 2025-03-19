@@ -17,6 +17,7 @@ function Chat({ refresh, onRefreshComplete }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [messageImages, setMessageImages] = useState([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [discussionClosed, setDiscussionClosed] = useState(false); // Track discussion status
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const token = localStorage.getItem('authToken');
@@ -25,7 +26,6 @@ function Chat({ refresh, onRefreshComplete }) {
   const API_USERS_URL = 'http://localhost:3001/api/users';
   const API_HOME_VALUES_URL = 'http://localhost:3001/api/home-values';
 
-  // Calculate visible items for carousel
   const itemsPerView = 3;
   const maxIndex = Math.max(0, selectedItem?.images?.length - itemsPerView) || 0;
 
@@ -50,9 +50,11 @@ function Chat({ refresh, onRefreshComplete }) {
   useEffect(() => {
     if (selectedItem) {
       fetchMessages(selectedItem.id, selectedItem.type);
-      setCarouselIndex(0); // Reset carousel when changing items
+      setCarouselIndex(0);
+      checkDiscussionStatus(); // Check discussion status when item changes
     } else {
       setMessages([]);
+      setDiscussionClosed(false);
     }
   }, [selectedItem]);
 
@@ -60,6 +62,7 @@ function Chat({ refresh, onRefreshComplete }) {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
+    checkDiscussionStatus(); // Re-check status when messages update
   }, [messages]);
 
   const fetchCurrentUser = async () => {
@@ -72,10 +75,8 @@ function Chat({ refresh, onRefreshComplete }) {
       const userData = await response.json();
       setCurrentUserId(userData.id);
       setUserRole(userData.role);
-      console.log('Current user:', userData);
     } catch (err) {
       setError('Impossible de récupérer les informations utilisateur');
-      console.error('fetchCurrentUser error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -90,11 +91,9 @@ function Chat({ refresh, onRefreshComplete }) {
       if (!response.ok) throw new Error('Failed to fetch inquiries');
       const data = await response.json();
       setInquiries(data.map(item => ({ ...item, type: 'inquiry' })));
-      console.log('Inquiries fetched:', data);
       setError(null);
     } catch (err) {
       setError(err.message);
-      console.error('fetchInquiries error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -106,17 +105,12 @@ function Chat({ refresh, onRefreshComplete }) {
       const response = await fetch(`${API_HOME_VALUES_URL}/user-and-expert`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch home values');
-      }
+      if (!response.ok) throw new Error('Failed to fetch home values');
       const data = await response.json();
       setHomeValues(data.map(item => ({ ...item, type: 'home_value' })));
-      console.log('Home values fetched:', data);
       setError(null);
     } catch (err) {
       setError(err.message);
-      console.error('fetchHomeValues error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -131,24 +125,30 @@ function Chat({ refresh, onRefreshComplete }) {
       const response = await fetch(url, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to fetch messages');
-      }
+      if (!response.ok) throw new Error('Failed to fetch messages');
       const data = await response.json();
       setMessages(data);
-      console.log(`Messages for ${itemType} ${itemId}:`, data);
       setError(null);
     } catch (err) {
       setError(err.message);
-      console.error('fetchMessages error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const checkDiscussionStatus = () => {
+    if (selectedItem?.type === 'home_value' && selectedItem.expert_id) {
+      // Check if any message's sender_id matches the expert_id
+      const expertReplied = messages.some(msg => msg.sender_id === selectedItem.expert_id);
+      setDiscussionClosed(expertReplied);
+    } else {
+      setDiscussionClosed(false); // Only home_value with an expert can be closed
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && messageImages.length === 0) || !selectedItem) return;
+    if (discussionClosed && userRole !== 'expert') return; // Prevent sending if closed and not expert
 
     setIsLoading(true);
     try {
@@ -158,30 +158,21 @@ function Chat({ refresh, onRefreshComplete }) {
 
       const formData = new FormData();
       formData.append('message', newMessage);
-      messageImages.forEach((image, index) => {
-        formData.append('images', image);
-      });
+      messageImages.forEach((image) => formData.append('images', image));
 
       const response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Server error:', response.status, errorData);
-        throw new Error(errorData.error || errorData.message || 'Failed to send message');
-      }
+      if (!response.ok) throw new Error('Failed to send message');
 
       setNewMessage('');
       setMessageImages([]);
       await fetchMessages(selectedItem.id, selectedItem.type);
     } catch (err) {
       setError(err.message);
-      console.error('handleSendMessage error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -200,12 +191,9 @@ function Chat({ refresh, onRefreshComplete }) {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!response.ok) throw new Error('Failed to validate request');
-      const data = await response.json();
-      console.log('Validated request:', data);
       fetchHomeValues();
     } catch (err) {
       setError(err.message);
-      console.error('handleValidateRequest error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -235,10 +223,7 @@ function Chat({ refresh, onRefreshComplete }) {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete item');
-      }
+      if (!response.ok) throw new Error('Failed to delete item');
       if (type === 'inquiry') {
         setInquiries(inquiries.filter(item => item.id !== itemId));
       } else {
@@ -250,7 +235,6 @@ function Chat({ refresh, onRefreshComplete }) {
       }
     } catch (err) {
       setError(err.message);
-      console.error('handleDeleteInquiry error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -263,43 +247,21 @@ function Chat({ refresh, onRefreshComplete }) {
     return messages.some(msg => msg.sender_id !== currentUserId && !msg.is_read);
   };
 
-  const handleImageClick = (imageUrl) => {
-    setSelectedImage(imageUrl);
-  };
-
-  const handleRemoveImage = (index) => {
-    const updatedMessageImages = [...messageImages];
-    updatedMessageImages.splice(index, 1);
-    setMessageImages(updatedMessageImages);
-  };
-
-  const handleCloseImage = () => {
-    setSelectedImage(null);
-  };
-
-  const handleImageUploadClick = () => {
-    fileInputRef.current.click();
-  };
-
+  const handleImageClick = (imageUrl) => setSelectedImage(imageUrl);
+  const handleRemoveImage = (index) => setMessageImages(messageImages.filter((_, i) => i !== index));
+  const handleCloseImage = () => setSelectedImage(null);
+  const handleImageUploadClick = () => fileInputRef.current.click();
   const handleImageSelect = (e) => {
-    if (e.target.files) {
-      const newImages = Array.from(e.target.files);
-      setMessageImages([...messageImages, ...newImages]);
-    }
+    if (e.target.files) setMessageImages([...messageImages, ...Array.from(e.target.files)]);
   };
 
-  const canDeleteHomeValue = (item) => {
-    if (userRole === 'expert' && item.expert_id === currentUserId) return true;
-    if (item.user_id === currentUserId) return true;
-    return false;
-  };
+  const canDeleteHomeValue = (item) =>
+    (userRole === 'expert' && item.expert_id === currentUserId) || item.user_id === currentUserId;
 
   const combinedItems = [...inquiries, ...homeValues];
 
-  const getImageCountLabel = (images) => {
-    if (!images || images.length === 0) return '';
-    return images.length === 1 ? '1 image' : `${images.length} images`;
-  };
+  const getImageCountLabel = (images) =>
+    images?.length ? (images.length === 1 ? '1 image' : `${images.length} images`) : '';
 
   return (
     <div className="container-fluid">
@@ -340,7 +302,8 @@ function Chat({ refresh, onRefreshComplete }) {
                           <Check size={16} />
                         </button>
                       )}
-                      {item.type === 'home_value' && canDeleteHomeValue(item) && (
+                      {(item.type === 'home_value' && canDeleteHomeValue(item)) || 
+                       (item.type === 'inquiry' && (item.role === 'user' || item.role === 'agent')) ? (
                         <button
                           className="btn btn-sm btn-outline-danger"
                           onClick={(e) => handleDeleteInquiry(item.id, item.type, e)}
@@ -348,16 +311,7 @@ function Chat({ refresh, onRefreshComplete }) {
                         >
                           <Trash2 size={16} />
                         </button>
-                      )}
-                      {item.type === 'inquiry' && (item.role === 'user' || item.role === 'agent') && (
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={(e) => handleDeleteInquiry(item.id, item.type, e)}
-                          title="Supprimer"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
+                      ) : null}
                     </div>
                   </div>
                   {hasUnreadMessages(item.id, item.type) && (
@@ -400,10 +354,7 @@ function Chat({ refresh, onRefreshComplete }) {
                     <h6 className="mb-2">Images du bien:</h6>
                     <div
                       className="property-images-gallery p-2 position-relative"
-                      style={{
-                        backgroundColor: '#f0f2f5',
-                        borderRadius: '12px',
-                      }}
+                      style={{ backgroundColor: '#f0f2f5', borderRadius: '12px' }}
                     >
                       <div
                         className="carousel-container"
@@ -437,17 +388,13 @@ function Chat({ refresh, onRefreshComplete }) {
                                 cursor: 'pointer',
                               }}
                               onClick={() => handleImageClick(`http://localhost:3001${img}`)}
-                              onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                              onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                              onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                              onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
                             >
                               <img
                                 src={`http://localhost:3001${img}`}
                                 alt={`Image ${index + 1}`}
-                                style={{
-                                  width: '120px',
-                                  height: '120px',
-                                  objectFit: 'cover',
-                                }}
+                                style={{ width: '120px', height: '120px', objectFit: 'cover' }}
                               />
                               <div
                                 className="image-overlay"
@@ -473,7 +420,6 @@ function Chat({ refresh, onRefreshComplete }) {
                           ))}
                         </div>
                       </div>
-
                       {selectedItem.images.length > 3 && (
                         <>
                           <button
@@ -495,7 +441,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            &lt;
+                            
                           </button>
                           <button
                             className="carousel-btn carousel-btn-right"
@@ -516,7 +462,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            &gt;
+                            
                           </button>
                         </>
                       )}
@@ -533,7 +479,7 @@ function Chat({ refresh, onRefreshComplete }) {
                     backgroundColor: '#f8f9fa',
                     borderRadius: '12px',
                     boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.05)',
-                    padding: '16px'
+                    padding: '16px',
                   }}
                 >
                   {messages.length === 0 && !isLoading ? (
@@ -544,45 +490,41 @@ function Chat({ refresh, onRefreshComplete }) {
                   ) : (
                     messages.map((msg) => (
                       <div key={msg.id} style={{ width: '100%', marginBottom: '18px' }}>
-                        <div style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: shouldAlignRight(msg) ? 'flex-end' : 'flex-start'
-                        }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: shouldAlignRight(msg) ? 'flex-end' : 'flex-start',
+                          }}
+                        >
                           <div
                             style={{
-                              backgroundColor: shouldAlignRight(msg)
-                                ? '#007bff'
-                                : '#ffffff',
+                              backgroundColor: shouldAlignRight(msg) ? '#007bff' : '#ffffff',
                               color: shouldAlignRight(msg) ? 'white' : 'black',
                               padding: '12px 16px',
                               borderRadius: shouldAlignRight(msg) ? '18px 18px 0 18px' : '18px 18px 18px 0',
                               maxWidth: '75%',
                               boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
-                              border: shouldAlignRight(msg)
-                                ? 'none'
-                                : '1px solid #f0f0f0',
+                              border: shouldAlignRight(msg) ? 'none' : '1px solid #f0f0f0',
                               wordBreak: 'break-word',
-                              opacity: 1,
-                              position: 'relative',
-                              overflow: 'hidden'
                             }}
                           >
-                            {msg.message && <div style={{ marginBottom: msg.images && msg.images.length > 0 ? '12px' : '0' }}>{msg.message}</div>}
+                            {msg.message && (
+                              <div style={{ marginBottom: msg.images?.length ? '12px' : '0' }}>
+                                {msg.message}
+                              </div>
+                            )}
                             {msg.images && msg.images.length > 0 && (
-                              <div
-                                className="message-images"
-                                style={{
-                                  marginTop: msg.message ? '8px' : '0'
-                                }}
-                              >
-                                <div style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  marginBottom: '8px',
-                                  fontSize: '12px',
-                                  color: shouldAlignRight(msg) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)'
-                                }}>
+                              <div className="message-images" style={{ marginTop: msg.message ? '8px' : '0' }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    marginBottom: '8px',
+                                    fontSize: '12px',
+                                    color: shouldAlignRight(msg) ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.6)',
+                                  }}
+                                >
                                   <Image size={14} style={{ marginRight: '4px' }} />
                                   <span>{getImageCountLabel(msg.images)}</span>
                                 </div>
@@ -591,10 +533,13 @@ function Chat({ refresh, onRefreshComplete }) {
                                   style={{
                                     display: 'grid',
                                     gap: '4px',
-                                    gridTemplateColumns: msg.images.length === 1 ? '1fr' :
-                                                        msg.images.length === 2 ? '1fr 1fr' :
-                                                        'repeat(auto-fill, minmax(100px, 1fr))',
-                                    maxWidth: '100%'
+                                    gridTemplateColumns:
+                                      msg.images.length === 1
+                                        ? '1fr'
+                                        : msg.images.length === 2
+                                        ? '1fr 1fr'
+                                        : 'repeat(auto-fill, minmax(100px, 1fr))',
+                                    maxWidth: '100%',
                                   }}
                                 >
                                   {msg.images.map((img, index) => (
@@ -604,8 +549,10 @@ function Chat({ refresh, onRefreshComplete }) {
                                         position: 'relative',
                                         borderRadius: '8px',
                                         overflow: 'hidden',
-                                        border: `2px solid ${shouldAlignRight(msg) ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)'}`,
-                                        height: msg.images.length <= 2 ? '180px' : '120px'
+                                        border: `2px solid ${
+                                          shouldAlignRight(msg) ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)'
+                                        }`,
+                                        height: msg.images.length <= 2 ? '180px' : '120px',
                                       }}
                                       onClick={() => handleImageClick(`http://localhost:3001${img}`)}
                                     >
@@ -617,7 +564,7 @@ function Chat({ refresh, onRefreshComplete }) {
                                           height: '100%',
                                           objectFit: 'cover',
                                           cursor: 'pointer',
-                                          transition: 'transform 0.3s ease'
+                                          transition: 'transform 0.3s ease',
                                         }}
                                       />
                                       <div
@@ -631,10 +578,10 @@ function Chat({ refresh, onRefreshComplete }) {
                                           justifyContent: 'center',
                                           opacity: '0',
                                           transition: 'opacity 0.2s ease',
-                                          cursor: 'pointer'
+                                          cursor: 'pointer',
                                         }}
-                                        onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
-                                        onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+                                        onMouseOver={(e) => (e.currentTarget.style.opacity = '1')}
+                                        onMouseOut={(e) => (e.currentTarget.style.opacity = '0')}
                                       >
                                         <Maximize2 size={24} color="white" />
                                       </div>
@@ -644,24 +591,28 @@ function Chat({ refresh, onRefreshComplete }) {
                               </div>
                             )}
                           </div>
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: '#6c757d',
-                            marginTop: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}>
+                          <div
+                            style={{
+                              fontSize: '0.75rem',
+                              color: '#6c757d',
+                              marginTop: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
                             {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-                            <span style={{
-                              display: 'inline-block',
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: msg.is_read ? '#28a745' : '#f8f9fa',
-                              border: `1px solid ${msg.is_read ? '#28a745' : '#6c757d'}`,
-                              marginLeft: '4px'
-                            }}></span>
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: msg.is_read ? '#28a745' : '#f8f9fa',
+                                border: `1px solid ${msg.is_read ? '#28a745' : '#6c757d'}`,
+                                marginLeft: '4px',
+                              }}
+                            ></span>
                             <span style={{ fontSize: '0.7rem' }}>{msg.is_read ? 'Lu' : 'Non lu'}</span>
                           </div>
                         </div>
@@ -671,77 +622,97 @@ function Chat({ refresh, onRefreshComplete }) {
                 </div>
 
                 <div className="message-input-container mt-3">
-                  {messageImages.length > 0 && (
-                    <div className="preview-images mb-2">
-                      {messageImages.map((image, index) => (
-                        <div key={index} className="preview-image-container" style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}>
-                          <img
-                            src={URL.createObjectURL(image)}
-                            alt={`Preview ${index}`}
-                            style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '2px solid #ccc' }}
-                          />
-                          <button
-                            className="btn btn-sm btn-danger"
-                            style={{
-                              position: 'absolute',
-                              top: '-5px',
-                              right: '-5px',
-                              borderRadius: '50%',
-                              padding: '0.15rem',
-                              width: '20px',
-                              height: '20px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                            }}
-                            onClick={() => handleRemoveImage(index)}
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-                      ))}
+                  {discussionClosed && userRole !== 'expert' ? (
+                    <div className="alert alert-info text-center">
+                      Cette discussion est fermée. Un expert a répondu à votre demande d'estimation.
                     </div>
-                  )}
-                  <div className="input-group input-group-sm shadow-sm rounded-pill bg-white overflow-hidden">
-                    <input
-                      type="text"
-                      className="form-control border-0 py-2 ps-3"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Tapez votre message..."
-                      onKeyPress={(e) => { if (e.key === 'Enter' && !e.shiftKey) handleSendMessage(); }}
-                      disabled={isLoading}
-                    />
-                    <button
-                      className="btn btn-link text-muted border-0 px-3"
-                      type="button"
-                      onClick={handleImageUploadClick}
-                      disabled={isLoading}
-                      title="Ajouter des images"
-                    >
-                      <Image size={16} />
-                    </button>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      className="d-none"
-                      onChange={handleImageSelect}
-                      accept="image/*"
-                      multiple
-                    />
-                    <button
-                      className="btn btn-primary px-3 rounded-end"
-                      onClick={handleSendMessage}
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                      ) : (
-                        'Envoyer'
+                  ) : (
+                    <>
+                      {messageImages.length > 0 && (
+                        <div className="preview-images mb-2">
+                          {messageImages.map((image, index) => (
+                            <div
+                              key={index}
+                              className="preview-image-container"
+                              style={{ position: 'relative', display: 'inline-block', marginRight: '8px' }}
+                            >
+                              <img
+                                src={URL.createObjectURL(image)}
+                                alt={`Preview ${index}`}
+                                style={{
+                                  width: '100px',
+                                  height: '100px',
+                                  objectFit: 'cover',
+                                  borderRadius: '8px',
+                                  border: '2px solid #ccc',
+                                }}
+                              />
+                              <button
+                                className="btn btn-sm btn-danger"
+                                style={{
+                                  position: 'absolute',
+                                  top: '-5px',
+                                  right: '-5px',
+                                  borderRadius: '50%',
+                                  padding: '0.15rem',
+                                  width: '20px',
+                                  height: '20px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                }}
+                                onClick={() => handleRemoveImage(index)}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    </button>
-                  </div>
+                      <div className="input-group input-group-sm shadow-sm rounded-pill bg-white overflow-hidden">
+                        <input
+                          type="text"
+                          className="form-control border-0 py-2 ps-3"
+                          value={newMessage}
+                          onChange={(e) => setNewMessage(e.target.value)}
+                          placeholder="Tapez votre message..."
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) handleSendMessage();
+                          }}
+                          disabled={isLoading || (discussionClosed && userRole !== 'expert')}
+                        />
+                        <button
+                          className="btn btn-link text-muted border-0 px-3"
+                          type="button"
+                          onClick={handleImageUploadClick}
+                          disabled={isLoading || (discussionClosed && userRole !== 'expert')}
+                          title="Ajouter des images"
+                        >
+                          <Image size={16} />
+                        </button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="d-none"
+                          onChange={handleImageSelect}
+                          accept="image/*"
+                          multiple
+                        />
+                        <button
+                          className="btn btn-primary px-3 rounded-end"
+                          onClick={handleSendMessage}
+                          disabled={isLoading || (discussionClosed && userRole !== 'expert')}
+                        >
+                          {isLoading ? (
+                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          ) : (
+                            'Envoyer'
+                          )}
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )
@@ -776,7 +747,7 @@ function Chat({ refresh, onRefreshComplete }) {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+              boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
             }}
             onClick={handleCloseImage}
           >
