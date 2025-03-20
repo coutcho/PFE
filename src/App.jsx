@@ -20,6 +20,7 @@ import Footer from './Components/Footer/Footer';
 import ListingPage from './Components/ListingPage/ListingPage';
 import ResetPasswordModal from './Components/Navbar/ResetPasswordModal';
 import AdminPage from "./Components/Admin/AdminPage";
+import AboutUS from './Components/Body/AboutUS';
 
 // AuthenticatedRoute
 function AuthenticatedRoute({ children }) {
@@ -81,6 +82,7 @@ export default function App() {
                 </div>
                 <div className="bg-light bg-gray-100">
                   <PropertyListings />
+                  <AboutUS />
                 </div>
                 <Footer />
               </Layout>

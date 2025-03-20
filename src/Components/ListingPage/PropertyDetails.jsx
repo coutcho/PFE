@@ -1,13 +1,14 @@
-// src/Components/ListingPage/PropertyDetails.jsx (or wherever it lives)
+// src/Components/ListingPage/PropertyDetails.jsx
 import React from 'react';
 import { Bed, Bath, Square, Heart, Share, Building, Sofa } from 'lucide-react';
-import { useFavorites } from '../Body/FavoritesContext'; // Adjust path as needed
+import { useFavorites } from '../Body/FavoritesContext'; // Adjusted relative path
 
 export default function PropertyDetails({ property }) {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
 
   const handleSaveClick = (e) => {
-    e.preventDefault(); // Prevent any unwanted form submission or bubbling if inside a form
+    e.preventDefault();
+    console.log('Save button clicked for property:', property.id);
     if (isFavorite(property.id)) {
       removeFavorite(property.id);
     } else {
@@ -26,7 +27,6 @@ export default function PropertyDetails({ property }) {
       });
   };
 
-  // Capitalize the first letter of the title
   const capitalizeTitle = (title) => {
     if (!title) return '';
     return title.charAt(0).toUpperCase() + title.slice(1);

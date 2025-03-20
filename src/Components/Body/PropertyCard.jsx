@@ -1,8 +1,7 @@
 // src/Components/Body/PropertyCard.jsx
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler, FaBuilding, FaChair } from 'react-icons/fa';
-import { useFavorites } from '../Body/FavoritesContext';
+import { useFavorites } from './FavoritesContext.jsx';
 
 const PropertyCard = ({ property, onClick }) => {
   const { isFavorite, addFavorite, removeFavorite } = useFavorites();
@@ -13,6 +12,7 @@ const PropertyCard = ({ property, onClick }) => {
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
+    console.log('Favorite button clicked for property:', property.id);
     if (isFavorite(property.id)) {
       removeFavorite(property.id);
     } else {

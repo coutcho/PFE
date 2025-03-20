@@ -15,7 +15,7 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Multer configuration (unchanged)
+// Multer configuration for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'public/uploads/');
@@ -26,7 +26,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage }).array('images', 10);
 
-// Authentication middleware (unchanged)
+// Authentication middleware
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -65,8 +65,28 @@ router.get('/', async (req, res) => {
   }
 });
 
-// **GET /api/properties/:id** - Fetch a single property
-router.get('/:id', async (req, res) => {
+// **GET /api/properties/favorites** - Get the authenticated user's favorite properties
+router.get('/favorites', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id; // Extracted from JWT by authenticateToken
+    const query = `
+      SELECT p.id, p.title, p.price, p.location, p.type, p.bedrooms, p.bathrooms, p.etage, 
+             p.square_footage, p.description, p.features, p.status, p.lat, p.long, 
+             p.images_path, p.equipe AS equipped, p.user_id AS agent_id, p.created_at 
+      FROM properties p
+      JOIN favorites f ON p.id = f.property_id
+      WHERE f.user_id = $1
+    `;
+    const result = await pool.query(query, [userId]);
+    res.json(result.rows); // Returns an array of favorite property objects
+  } catch (err) {
+    console.error('Error fetching favorites:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// **GET /api/properties/:id** - Fetch a single property (numeric IDs only)
+router.get('/:id(\\d+)', async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -124,8 +144,8 @@ router.post('/', authenticateToken, upload, async (req, res) => {
   }
 });
 
-// **PUT /api/properties/:id** - Update a property
-router.put('/:id', authenticateToken, upload, async (req, res) => {
+// **PUT /api/properties/:id** - Update a property (numeric IDs only)
+router.put('/:id(\\d+)', authenticateToken, upload, async (req, res) => {
   const { id } = req.params;
   const { title, price, location, type, bedrooms, bathrooms, etage, square_footage, description, features, status, lat, long, images_path, equipped, agent_id } = req.body;
 
@@ -179,8 +199,8 @@ router.put('/:id', authenticateToken, upload, async (req, res) => {
   }
 });
 
-// **DELETE /api/properties/:id** - Delete a property (unchanged)
-router.delete('/:id', authenticateToken, async (req, res) => {
+// **DELETE /api/properties/:id** - Delete a property (numeric IDs only)
+router.delete('/:id(\\d+)', authenticateToken, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query('DELETE FROM properties WHERE id = $1 RETURNING *', [id]);
@@ -190,6 +210,53 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.status(204).send();
   } catch (err) {
     console.error('Error deleting property:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// **POST /api/properties/favorites** - Add a property to the authenticated user's favorites
+router.post('/favorites', authenticateToken, async (req, res) => {
+  const propertyId = parseInt(req.body.propertyId);
+  if (isNaN(propertyId)) {
+    return res.status(400).json({ error: 'Invalid property ID' });
+  }
+  const userId = req.user.id;
+  try {
+    // Check if the favorite already exists to prevent duplicates
+    const checkQuery = 'SELECT COUNT(*) FROM favorites WHERE user_id = $1 AND property_id = $2';
+    const checkResult = await pool.query(checkQuery, [userId, propertyId]);
+    if (parseInt(checkResult.rows[0].count) > 0) {
+      return res.status(400).json({ error: 'Favorite already exists' });
+    }
+    // Insert the new favorite
+    const insertQuery = 'INSERT INTO favorites (user_id, property_id) VALUES ($1, $2)';
+    await pool.query(insertQuery, [userId, propertyId]);
+    res.status(201).json({ message: 'Favorite added' });
+  } catch (err) {
+    console.error('Error adding favorite:', err);
+    if (err.code === '23503') { // PostgreSQL foreign key violation
+      return res.status(400).json({ error: 'Property not found' });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// **DELETE /api/properties/favorites/:propertyId** - Remove a property from the authenticated user's favorites
+router.delete('/favorites/:propertyId', authenticateToken, async (req, res) => {
+  const propertyId = parseInt(req.params.propertyId);
+  if (isNaN(propertyId)) {
+    return res.status(400).json({ error: 'Invalid property ID' });
+  }
+  const userId = req.user.id;
+  try {
+    const deleteQuery = 'DELETE FROM favorites WHERE user_id = $1 AND property_id = $2';
+    const result = await pool.query(deleteQuery, [userId, propertyId]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Favorite not found' });
+    }
+    res.status(200).json({ message: 'Favorite removed' });
+  } catch (err) {
+    console.error('Error removing favorite:', err);
     res.status(500).json({ error: err.message });
   }
 });
