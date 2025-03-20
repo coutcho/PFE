@@ -32,7 +32,7 @@ function NavbarD() {
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
       <div className="container-fluid">
-        <Link className="navbar-brand" to="/">Real Estate Admin</Link>
+        <Link className="navbar-brand" to="/admin">Real Estate Admin</Link>
         <button 
           className="navbar-toggler" 
           type="button" 

@@ -222,7 +222,7 @@ function FilterSidebar({ onApplyFilters, onClose, selectedLocation }) {
             <option value="">Tous les types</option>
             <option value="appartement">Appartement</option>
             <option value="villa">Villa</option>
-            <option value="studio">Studio</option>
+            <option value="bureau">Bureau</option>
           </Form.Select>
         </Form.Group>
 

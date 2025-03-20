@@ -158,38 +158,40 @@ const PropertyListings = () => {
 
   return (
     <div className="container py-5">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex justify-content-center align-items-center mb-4">
         <h2>Featured Listings</h2>
         {/* Removed the Next and Previous buttons */}
       </div>
       
-      <div 
-        className="position-relative carousel-container" 
-        tabIndex="0" 
-        aria-label="Property listings carousel"
-      >
-        <Slider ref={sliderRef} {...settings}>
-          {properties.map((property) => (
-            <div
-              key={property.id}
-              className="carousel-slide"
-            >
-              <div className="property-card-wrapper">
-                <PropertyCard 
-                  property={property} 
-                  onClick={() => handleListingClick(property.id)}
-                />
-                {property.featured && (
-                  <span className="featured-badge">
-                    <FaStar /> Featured
-                  </span>
-                )}
+      <div className="row justify-content-center">
+        <div 
+          className="col-12 position-relative carousel-container" 
+          tabIndex="0" 
+          aria-label="Property listings carousel"
+        >
+          <Slider ref={sliderRef} {...settings}>
+            {properties.map((property) => (
+              <div
+                key={property.id}
+                className="carousel-slide"
+              >
+                <div className="property-card-wrapper">
+                  <PropertyCard 
+                    property={property} 
+                    onClick={() => handleListingClick(property.id)}
+                  />
+                  {property.featured && (
+                    <span className="featured-badge">
+                      <FaStar /> Featured
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </Slider>
-        
-        {/* Removed the "Showing X of Y properties" counter */}
+            ))}
+          </Slider>
+          
+          {/* Removed the "Showing X of Y properties" counter */}
+        </div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function AboutUS() {
   return (
-    <div className="container-fluid p-0">
+    <div id="about-us-section" className="container-fluid p-0">
       {/* Hero Section */}
       <div className="bg-primary text-white py-5">
         <div className="container">
@@ -55,7 +55,7 @@ function AboutUS() {
           <div className="col-12">
             <h2 className="text-center mb-5">Notre Équipe de Direction</h2>
           </div>
-          <div className="col-lg-4 mb-4">
+          <div className="col-lg-4 mb-4 cardina">
             <div className="card text-center">
               <div className="card-body">
                 <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>
@@ -65,7 +65,7 @@ function AboutUS() {
               </div>
             </div>
           </div>
-          <div className="col-lg-4 mb-4">
+          <div className="col-lg-4 mb-4 cardina">
             <div className="card text-center">
               <div className="card-body">
                 <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>
@@ -75,7 +75,7 @@ function AboutUS() {
               </div>
             </div>
           </div>
-          <div className="col-lg-4 mb-4">
+          <div className="col-lg-4 mb-4 cardina">
             <div className="card text-center">
               <div className="card-body">
                 <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>

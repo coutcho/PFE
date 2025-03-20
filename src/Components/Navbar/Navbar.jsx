@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import io from 'socket.io-client';
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { jwtDecode } from "jwt-decode"; // Import jwtDecode for decoding the token
+import io from "socket.io-client";
 import "./Navbar.css";
 import SignInModal from "./SignInModal";
 import SignUpModal from "./SignUpModal";
@@ -12,13 +13,17 @@ export default function Navbar() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(!!localStorage.getItem("authToken"));
+  const [isAdmin, setIsAdmin] = useState(false); // New state to track admin status
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
   const token = localStorage.getItem("authToken");
   const API_INQUIRIES_URL = "http://localhost:3001/api/inquiries";
   const API_USERS_URL = "http://localhost:3001/api/users";
-  const socket = io('http://localhost:3001');
+  const socket = io("http://localhost:3001");
 
+  // Handle scroll effect for navbar styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -27,6 +32,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Handle unread messages and socket connection
   useEffect(() => {
     const checkUnreadMessages = async () => {
       if (!token) {
@@ -35,7 +41,7 @@ export default function Navbar() {
       }
       try {
         const response = await fetch(`${API_INQUIRIES_URL}/user/unread-count`, {
-          headers: { "Authorization": `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` },
         });
         if (!response.ok) throw new Error("Failed to fetch unread count");
         const data = await response.json();
@@ -50,22 +56,42 @@ export default function Navbar() {
 
     if (token) {
       fetch(`${API_USERS_URL}/me`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
       })
-        .then(res => res.json())
-        .then(userData => {
-          socket.emit('join', userData.id);
-          socket.on('newMessage', () => {
+        .then((res) => res.json())
+        .then((userData) => {
+          socket.emit("join", userData.id);
+          socket.on("newMessage", () => {
             checkUnreadMessages();
           });
         });
     }
 
     return () => {
-      socket.off('newMessage');
+      socket.off("newMessage");
       socket.disconnect();
     };
   }, [token]);
+
+  // Check if the user is an admin whenever isSignedIn changes
+  useEffect(() => {
+    if (isSignedIn) {
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        try {
+          const decoded = jwtDecode(token);
+          setIsAdmin(decoded.role === "admin");
+        } catch (error) {
+          console.error("Error decoding token:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    } else {
+      setIsAdmin(false);
+    }
+  }, [isSignedIn]);
 
   const closeModal = () => {
     setShowSignInModal(false);
@@ -76,8 +102,8 @@ export default function Navbar() {
   const handleSignInSuccess = () => {
     setIsSignedIn(true);
     closeModal();
-    window.dispatchEvent(new Event('loginSuccess'));
-    console.log('Login successful, event dispatched');
+    window.dispatchEvent(new Event("loginSuccess"));
+    console.log("Login successful, event dispatched");
   };
 
   const handleLogout = async () => {
@@ -88,28 +114,35 @@ export default function Navbar() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
           },
         });
       }
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
+      setIsAdmin(false); // Reset admin status on logout
       setHasUnreadMessages(false);
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
+      setIsAdmin(false); // Reset admin status on logout
       setHasUnreadMessages(false);
       navigate("/");
     }
   };
 
+  const handleScrollToAboutUs = () => {
+    const aboutUsSection = document.getElementById("about-us-section");
+    if (aboutUsSection) {
+      aboutUsSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <nav
-      className={`navbar navbar-expand-lg bg-body-tertiary ${
-        scrolled ? "scrolled" : ""
-      }`}
+      className={`navbar navbar-expand-lg bg-body-tertiary ${scrolled ? "scrolled" : ""}`}
       aria-label="Eleventh navbar example"
     >
       <div className="container-fluid">
@@ -145,16 +178,29 @@ export default function Navbar() {
               </a>
               <ul className="dropdown-menu">
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=appartement&engagement=location">
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=appartement&engagement=location"
+                  >
                     Appartement
                   </Link>
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=villa&engagement=location">
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=villa&engagement=location"
+                  >
                     Villa
                   </Link>
                 </li>
-                <li><Link className="dropdown-item" to="/listings?type=bureau&engagement=location">Bureau</Link></li>
+                <li>
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=bureau&engagement=location"
+                  >
+                    Bureau
+                  </Link>
+                </li>
               </ul>
             </li>
             <li className="nav-item dropdown">
@@ -168,26 +214,38 @@ export default function Navbar() {
               </a>
               <ul className="dropdown-menu">
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=appartement&engagement=achat">
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=appartement&engagement=achat"
+                  >
                     Appartement
                   </Link>
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=villa&engagement=achat">
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=villa&engagement=achat"
+                  >
                     Villa
                   </Link>
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/listings?type=bureau&engagement=achat">
-                  Bureau
-                  </Link></li>
+                  <Link
+                    className="dropdown-item"
+                    to="/listings?type=bureau&engagement=achat"
+                  >
+                    Bureau
+                  </Link>
+                </li>
               </ul>
             </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/home-value">
-                Home Value
-              </Link>
-            </li>
+            {isHomePage && (
+              <li className="nav-item">
+                <button className="nav-link" onClick={handleScrollToAboutUs}>
+                  About Us
+                </button>
+              </li>
+            )}
             <li className="nav-item">
               <Link className="nav-link" to="/contact">
                 Contact Us
@@ -196,46 +254,82 @@ export default function Navbar() {
           </ul>
           <div className="d-flex align-items-center gap-2">
             {isSignedIn ? (
-              <div className="dropdown">
-                <button
-                  className="btn btn-primary dropdown-toggle"
-                  type="button"
-                  data-bs-toggle="dropdown"
-                  aria-expanded="false"
-                >
-                  Account
-                </button>
-                <ul className="dropdown-menu dropdown-menu-end">
-                  <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
-                  <li><Link className="dropdown-item" to="/favorites">Favorite Listings</Link></li>
-                  <li style={{ position: 'relative' }}>
-                    <Link className="dropdown-item" to="/inbox">
-                      Inbox
-                      {hasUnreadMessages && (
-                        <span
-                          style={{
-                            position: 'absolute',
-                            top: '50%',
-                            right: '10px',
-                            transform: 'translateY(-50%)',
-                            width: '8px',
-                            height: '8px',
-                            backgroundColor: 'red',
-                            borderRadius: '50%',
-                            display: 'inline-block',
-                          }}
-                        />
-                      )}
-                    </Link>
-                  </li>
-                  <li><hr className="dropdown-divider" /></li>
-                  <li>
-                    <button className="dropdown-item text-danger" onClick={handleLogout}>
-                      Logout
-                    </button>
-                  </li>
-                </ul>
-              </div>
+              <>
+                {/* Updated Dashboard button for admins with icon and rounded shape */}
+                {isAdmin && (
+                  <Link 
+                    to="/admin" 
+                    className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" 
+                    style={{ width: "40px", height: "40px" }}
+                    title="Admin Dashboard"
+                  >
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      width="16" 
+                      height="16" 
+                      fill="currentColor" 
+                      className="bi bi-speedometer2" 
+                      viewBox="0 0 16 16"
+                    >
+                      <path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
+                      <path fillRule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A7.99 7.99 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/>
+                    </svg>
+                  </Link>
+                )}
+                <div className="dropdown">
+                  <button
+                    className="btn btn-primary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Account
+                  </button>
+                  <ul className="dropdown-menu dropdown-menu-end">
+                    <li>
+                      <Link className="dropdown-item" to="/profile">
+                        Profile
+                      </Link>
+                    </li>
+                    <li>
+                      <Link className="dropdown-item" to="/favorites">
+                        Favorite Listings
+                      </Link>
+                    </li>
+                    <li style={{ position: "relative" }}>
+                      <Link className="dropdown-item" to="/inbox">
+                        Inbox
+                        {hasUnreadMessages && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              right: "10px",
+                              transform: "translateY(-50%)",
+                              width: "8px",
+                              height: "8px",
+                              backgroundColor: "red",
+                              borderRadius: "50%",
+                              display: "inline-block",
+                            }}
+                          />
+                        )}
+                      </Link>
+                    </li>
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item text-danger"
+                        onClick={handleLogout}
+                      >
+                        Logout
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </>
             ) : (
               <>
                 <button

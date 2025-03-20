@@ -1,5 +1,5 @@
-import React from 'react';
-import { Home, DollarSign, Building, Users, Star, MapPin, User, MessageCircle, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, DollarSign, Building, MapPin, User, Star } from 'lucide-react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -23,28 +23,42 @@ ChartJS.register(
   Legend
 );
 
-const StatCard = ({ title, value, percentage, icon: Icon }) => {
+// Utility function for authenticated API calls
+const fetchWithAuth = async (url, options = {}) => {
+  const token = localStorage.getItem('authToken');
+  if (!token) {
+    throw new Error('No authentication token found. Please sign in.');
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+    ...options.headers,
+  };
+
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.json();
+};
+
+// StatCard Component
+const StatCard = ({ title, value, icon: Icon }) => {
   return (
     <div className="card shadow-sm h-100">
-      <div className="card-body">
-        <div className="d-flex justify-content-between align-items-center">
-          <div>
-            <h6 className="card-subtitle mb-2 text-muted">{title}</h6>
-            <h2 className="card-title mb-0">{value}</h2>
-            {percentage && (
-              <small className="text-success">
-                <TrendingUp size={16} className="me-1" />
-                {percentage}% this month
-              </small>
-            )}
-          </div>
-          {Icon && <Icon size={24} className="text-primary" />}
+      <div className="card-body d-flex align-items-center">
+        <Icon size={24} className="me-3 text-primary" />
+        <div>
+          <h6 className="card-subtitle mb-2 text-muted">{title}</h6>
+          <h2 className="card-title mb-0">{value}</h2>
         </div>
       </div>
     </div>
   );
 };
 
+// PropertyCard Component
 const PropertyCard = ({ name, location, agent, image }) => {
   return (
     <div className="card shadow-sm h-100 transition-shadow hover-shadow">
@@ -64,6 +78,7 @@ const PropertyCard = ({ name, location, agent, image }) => {
   );
 };
 
+// AgentCard Component
 const AgentCard = ({ name, avatar, rating, bio }) => {
   return (
     <div className="card shadow-sm mb-3">
@@ -85,6 +100,7 @@ const AgentCard = ({ name, avatar, rating, bio }) => {
   );
 };
 
+// MessageList Component
 const MessageList = ({ messages }) => {
   return (
     <div className="card shadow-sm">
@@ -106,17 +122,13 @@ const MessageList = ({ messages }) => {
   );
 };
 
+// Chart Component
 const Chart = ({ data }) => {
   const options = {
     responsive: true,
     plugins: {
-      legend: {
-        position: 'top',
-      },
-      title: {
-        display: true,
-        text: 'Property Types Trend'
-      }
+      legend: { position: 'top' },
+      title: { display: true, text: 'New Properties Over Time' }
     }
   };
 
@@ -129,82 +141,172 @@ const Chart = ({ data }) => {
   );
 };
 
-const chartData = {
-  labels: ['Nov 1', 'Nov 2', 'Nov 3', 'Nov 4', 'Nov 5', 'Nov 6'],
-  datasets: [
-    {
-      label: 'Luxury',
-      data: [65, 59, 80, 81, 56, 55],
-      borderColor: '#0d6efd',
-      tension: 0.1
-    },
-    {
-      label: 'Commercial',
-      data: [28, 48, 40, 19, 86, 27],
-      borderColor: '#6c757d',
-      tension: 0.1
-    }
-  ]
-};
-
-const properties = [
-  {
-    name: 'Luxury Villa',
-    location: 'Beverly Hills, CA',
-    agent: 'John Smith',
-    image: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&w=800&q=80'
-  },
-  {
-    name: 'Modern Apartment',
-    location: 'Manhattan, NY',
-    agent: 'Sarah Johnson',
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80'
-  }
-];
-
-const agents = [
-  {
-    name: 'John Smith',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&q=80',
-    rating: 5,
-    bio: 'Top performer with 10+ years of experience'
-  },
-  {
-    name: 'Sarah Johnson',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&q=80',
-    rating: 4,
-    bio: 'Luxury property specialist'
-  }
-];
-
-const messages = [
-  {
-    user: 'John Smith',
-    message: 'New listing available in Beverly Hills',
-    timestamp: '2h ago',
-    status: 'unread'
-  },
-  {
-    user: 'Sarah Johnson',
-    message: 'Client meeting scheduled for tomorrow',
-    timestamp: '5h ago',
-    status: 'read'
-  }
-];
-
+// Main App Component
 function App() {
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [forRentCount, setForRentCount] = useState(0);
+  const [forSaleCount, setForSaleCount] = useState(0);
+  const [popularProperties, setPopularProperties] = useState([]);
+  const [topAgents, setTopAgents] = useState([]);
+  const [recentMessages, setRecentMessages] = useState([]);
+  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const userData = await fetchWithAuth('http://localhost:3001/api/users/me');
+        setUserRole(userData.role); // e.g., "admin", "agent", "expert"
+        setIsAuthenticated(true);
+
+        if (userData.role === 'admin') {
+          fetchAdminData();
+        } else {
+          fetchRegularData();
+        }
+      } catch (error) {
+        setError(error.message);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (localStorage.getItem('authToken')) {
+      fetchUserData();
+    } else {
+      window.location.href = 'http://localhost:5173/signin';
+    }
+  }, []);
+
+  const fetchAdminData = async () => {
+    try {
+      const [
+        totalProps,
+        propsByStatus,
+        inquiriesPerProperty,
+        propsPerAgent,
+        newPropsOverTime,
+      ] = await Promise.all([
+        fetchWithAuth('http://localhost:3001/api/analytics/properties/total'),
+        fetchWithAuth('http://localhost:3001/api/analytics/properties/by-status'),
+        fetchWithAuth('http://localhost:3001/api/analytics/inquiries/per-property'),
+        fetchWithAuth('http://localhost:3001/api/analytics/properties/per-agent'),
+        fetchWithAuth('http://localhost:3001/api/analytics/properties/new-over-time'),
+      ]);
+
+      setTotalProperties(totalProps.totalProperties || 0);
+      const forRent = propsByStatus.find((s) => s.status.toLowerCase() === 'for rent');
+      const forSale = propsByStatus.find((s) => s.status.toLowerCase() === 'active');
+      setForRentCount(forRent ? forRent.count : 0);
+      setForSaleCount(forSale ? forSale.count : 0);
+
+      const topPropertyIds = inquiriesPerProperty
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 2)
+        .map((item) => item.property_id);
+      const popularPropsDetails = await Promise.all(
+        topPropertyIds.map((id) => fetchWithAuth(`http://localhost:3001/api/properties/${id}`))
+      );
+      setPopularProperties(popularPropsDetails);
+
+      const sortedAgents = propsPerAgent
+        .sort((a, b) => b.propertycount - a.propertycount)
+        .slice(0, 2);
+      setTopAgents(
+        sortedAgents.map((agent) => ({
+          name: agent.agentname,
+          avatar: agent.avatar || 'default-avatar.png',
+          rating: agent.rating || 0,
+          bio: agent.bio || 'No bio available',
+        }))
+      );
+
+      setRecentMessages([]); // Placeholder
+
+      const labels = newPropsOverTime.map((item) => item.month);
+      const data = newPropsOverTime.map((item) => item.count);
+      setChartData({
+        labels,
+        datasets: [
+          {
+            label: 'New Properties',
+            data,
+            borderColor: '#0d6efd',
+            tension: 0.1,
+          },
+        ],
+      });
+    } catch (error) {
+      setError(error.message);
+      console.error('Error fetching admin data:', error);
+    }
+  };
+
+  const fetchRegularData = async () => {
+    try {
+      const totalProps = await fetchWithAuth('http://localhost:3001/api/analytics/properties/total');
+      setTotalProperties(totalProps.totalProperties || 0);
+    } catch (error) {
+      setError(error.message);
+      console.error('Error fetching regular data:', error);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return null; // Redirect handled in useEffect
+  }
+
+  if (isLoading) {
+    return <div className="container mt-4">Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="container mt-4">
+        <div className="alert alert-danger" role="alert">
+          {error}
+          <br />
+          <button
+            className="btn btn-primary mt-2"
+            onClick={() => {
+              localStorage.removeItem('authToken');
+              setIsAuthenticated(false);
+            }}
+          >
+            Sign In Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (userRole && userRole !== 'admin') {
+    window.location.href = 'http://localhost:5173/user-dashboard'; // Redirect non-admins
+    return null;
+  }
+
   return (
     <div className="container-fluid p-4 bg-white">
       <div className="row g-4 mb-4">
         <div className="col-md-4">
-          <StatCard title="Total Properties" value="5.6k" percentage="8" icon={Home} />
+          <StatCard title="Total Properties" value={totalProperties} icon={Home} />
         </div>
-        <div className="col-md-4">
-          <StatCard title="For Rent" value="3.4k" percentage="8" icon={DollarSign} />
-        </div>
-        <div className="col-md-4">
-          <StatCard title="For Sale" value="1.6k" percentage="8" icon={Building} />
-        </div>
+        {userRole === 'admin' && (
+          <>
+            <div className="col-md-4">
+              <StatCard title="For Rent" value={forRentCount} icon={DollarSign} />
+            </div>
+            <div className="col-md-4">
+              <StatCard title="For Sale" value={forSaleCount} icon={Building} />
+            </div>
+          </>
+        )}
       </div>
 
       <div className="row g-4">
@@ -215,31 +317,44 @@ function App() {
             </div>
             <div className="card-body">
               <div className="row g-4">
-                {properties.map((property, index) => (
+                {popularProperties.map((property, index) => (
                   <div key={index} className="col-md-6">
-                    <PropertyCard {...property} />
+                    <PropertyCard
+                      name={property.name}
+                      location={property.location}
+                      agent={property.agent_name}
+                      image={property.image_url}
+                    />
                   </div>
                 ))}
               </div>
             </div>
           </div>
-          
+
           <Chart data={chartData} />
         </div>
 
         <div className="col-lg-4">
-          <div className="card shadow-sm mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">Top Agents</h5>
+          {userRole === 'admin' && (
+            <div className="card shadow-sm mb-4">
+              <div className="card-header bg-white">
+                <h5 className="mb-0">Top Agents</h5>
+              </div>
+              <div className="card-body">
+                {topAgents.map((agent, index) => (
+                  <AgentCard
+                    key={index}
+                    name={agent.name}
+                    avatar={agent.avatar}
+                    rating={agent.rating}
+                    bio={agent.bio}
+                  />
+                ))}
+              </div>
             </div>
-            <div className="card-body">
-              {agents.map((agent, index) => (
-                <AgentCard key={index} {...agent} />
-              ))}
-            </div>
-          </div>
+          )}
 
-          <MessageList messages={messages} />
+          <MessageList messages={recentMessages} />
         </div>
       </div>
     </div>
