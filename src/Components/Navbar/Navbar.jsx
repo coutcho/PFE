@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { jwtDecode } from "jwt-decode"; // Import jwtDecode for decoding the token
+import { jwtDecode } from "jwt-decode";
 import io from "socket.io-client";
 import "./Navbar.css";
 import SignInModal from "./SignInModal";
@@ -13,11 +13,11 @@ export default function Navbar() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(!!localStorage.getItem("authToken"));
-  const [isAdmin, setIsAdmin] = useState(false); // New state to track admin status
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isHomePage = location.pathname === "/";
   const token = localStorage.getItem("authToken");
   const API_INQUIRIES_URL = "http://localhost:3001/api/inquiries";
   const API_USERS_URL = "http://localhost:3001/api/users";
@@ -25,6 +25,7 @@ export default function Navbar() {
 
   // Handle scroll effect for navbar styling
   useEffect(() => {
+    console.log("Setting up scroll listener");
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
     };
@@ -34,6 +35,7 @@ export default function Navbar() {
 
   // Handle unread messages and socket connection
   useEffect(() => {
+    console.log("Setting up unread messages check and socket connection");
     const checkUnreadMessages = async () => {
       if (!token) {
         setHasUnreadMessages(false);
@@ -70,17 +72,21 @@ export default function Navbar() {
     return () => {
       socket.off("newMessage");
       socket.disconnect();
+      console.log("Socket connection cleaned up");
     };
   }, [token]);
 
   // Check if the user is an admin whenever isSignedIn changes
   useEffect(() => {
+    console.log("Checking user role and admin status");
     if (isSignedIn) {
       const token = localStorage.getItem("authToken");
       if (token) {
         try {
           const decoded = jwtDecode(token);
           setIsAdmin(decoded.role === "admin");
+          setUserRole(decoded.role);
+          console.log("Decoded token role:", decoded.role);
         } catch (error) {
           console.error("Error decoding token:", error);
           setIsAdmin(false);
@@ -90,6 +96,7 @@ export default function Navbar() {
       }
     } else {
       setIsAdmin(false);
+      setUserRole(null);
     }
   }, [isSignedIn]);
 
@@ -103,10 +110,38 @@ export default function Navbar() {
     setIsSignedIn(true);
     closeModal();
     window.dispatchEvent(new Event("loginSuccess"));
+    
+    // Get the token from localStorage
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error("No auth token found in localStorage after login");
+      return;
+    }
+
+    try {
+      // Decode the token
+      const decoded = jwtDecode(token);
+      console.log("Decoded token after login:", decoded); // Add logging to check decoded token
+      setUserRole(decoded.role);
+
+      // Check role and navigate accordingly
+      if (decoded.role === 'expert' || decoded.role === 'agent') {
+        navigate('/inbox');
+        console.log("Redirecting to inbox for role:", decoded.role);
+      } else {
+        // For other roles, redirect to home page
+        navigate('/');
+        console.log("Redirecting to home for role:", decoded.role);
+      }
+    } catch (error) {
+      console.error("Error decoding token:", error);
+    }
+
     console.log("Login successful, event dispatched");
   };
 
   const handleLogout = async () => {
+    console.log("Logout process started");
     try {
       const token = localStorage.getItem("authToken");
       if (token) {
@@ -120,16 +155,20 @@ export default function Navbar() {
       }
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
-      setIsAdmin(false); // Reset admin status on logout
+      setIsAdmin(false);
+      setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
+      console.log("Logout successful, redirected to home");
     } catch (error) {
       console.error("Error during logout:", error);
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
-      setIsAdmin(false); // Reset admin status on logout
+      setIsAdmin(false);
+      setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
+      console.log("Logout failed, still redirected to home");
     }
   };
 
@@ -162,100 +201,114 @@ export default function Navbar() {
         </button>
         <div className="collapse navbar-collapse" id="navbarsExample09">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="/">
-                Home
-              </Link>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Louer
-              </a>
-              <ul className="dropdown-menu">
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=appartement&engagement=location"
-                  >
-                    Appartement
+            {isSignedIn && (userRole === 'expert' || userRole === 'agent') ? (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link active" aria-current="page" to="/">
+                    Home
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=villa&engagement=location"
-                  >
-                    Villa
+              </>
+            ) : (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link active" aria-current="page" to="/">
+                    Home
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=bureau&engagement=location"
+                <li className="nav-item dropdown">
+                  <a
+                    className="nav-link dropdown-toggle"
+                    href="#"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
-                    Bureau
+                    Louer
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=appartement&engagement=location"
+                      >
+                        Appartement
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=villa&engagement=location"
+                      >
+                        Villa
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=bureau&engagement=location"
+                      >
+                        Bureau
+                      </Link>
+                    </li>
+                  </ul>
+                </li>
+                <li className="nav-item dropdown">
+                  <a
+                    className="nav-link dropdown-toggle"
+                    href="#"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Acheter
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=appartement&engagement=achat"
+                      >
+                        Appartement
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=villa&engagement=achat"
+                      >
+                        Villa
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=bureau&engagement=achat"
+                      >
+                        Bureau
+                      </Link>
+                    </li>
+                  </ul>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/home-value">
+                    Home Value
                   </Link>
                 </li>
-              </ul>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Acheter
-              </a>
-              <ul className="dropdown-menu">
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=appartement&engagement=achat"
-                  >
-                    Appartement
+                <li className="nav-item">
+                  <button className="nav-link" onClick={handleScrollToAboutUs}>
+                    About Us
+                  </button>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/contact">
+                    Contact Us
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=villa&engagement=achat"
-                  >
-                    Villa
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=bureau&engagement=achat"
-                  >
-                    Bureau
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            {isHomePage && (
-              <li className="nav-item">
-                <button className="nav-link" onClick={handleScrollToAboutUs}>
-                  About Us
-                </button>
-              </li>
+              </>
             )}
-            <li className="nav-item">
-              <Link className="nav-link" to="/contact">
-                Contact Us
-              </Link>
-            </li>
           </ul>
           <div className="d-flex align-items-center gap-2">
             {isSignedIn ? (
               <>
-                {/* Updated Dashboard button for admins with icon and rounded shape */}
                 {isAdmin && (
                   <Link 
                     to="/admin" 
@@ -286,47 +339,75 @@ export default function Navbar() {
                     Account
                   </button>
                   <ul className="dropdown-menu dropdown-menu-end">
-                    <li>
-                      <Link className="dropdown-item" to="/profile">
-                        Profile
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/favorites">
-                        Favorite Listings
-                      </Link>
-                    </li>
-                    <li style={{ position: "relative" }}>
-                      <Link className="dropdown-item" to="/inbox">
-                        Inbox
-                        {hasUnreadMessages && (
-                          <span
-                            style={{
-                              position: "absolute",
-                              top: "50%",
-                              right: "10px",
-                              transform: "translateY(-50%)",
-                              width: "8px",
-                              height: "8px",
-                              backgroundColor: "red",
-                              borderRadius: "50%",
-                              display: "inline-block",
-                            }}
-                          />
-                        )}
-                      </Link>
-                    </li>
-                    <li>
-                      <hr className="dropdown-divider" />
-                    </li>
-                    <li>
-                      <button
-                        className="dropdown-item text-danger"
-                        onClick={handleLogout}
-                      >
-                        Logout
-                      </button>
-                    </li>
+                    {isSignedIn && (userRole === 'expert' || userRole === 'agent') ? (
+                      <>
+                        <li>
+                          <Link className="dropdown-item" to="/inbox">
+                            Inbox
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item" to="/profile">
+                            Profile
+                          </Link>
+                        </li>
+                        <li>
+                          <hr className="dropdown-divider" />
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item text-danger"
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </button>
+                        </li>
+                      </>
+                    ) : (
+                      <>
+                        <li>
+                          <Link className="dropdown-item" to="/profile">
+                            Profile
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item" to="/favorites">
+                            Favorite Listings
+                          </Link>
+                        </li>
+                        <li style={{ position: "relative" }}>
+                          <Link className="dropdown-item" to="/inbox">
+                            Inbox
+                            {hasUnreadMessages && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "50%",
+                                  right: "10px",
+                                  transform: "translateY(-50%)",
+                                  width: "8px",
+                                  height: "8px",
+                                  backgroundColor: "red",
+                                  borderRadius: "50%",
+                                  display: "inline-block",
+                                }}
+                              />
+                            )}
+                          </Link>
+                        </li>
+                        <li>
+                          <hr className="dropdown-divider" />
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item text-danger"
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </button>
+                        </li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </>

@@ -26,24 +26,30 @@
   color: white;
 }
 
-.carousel-container {
+.caro {
   width: 100%;
 }
 
-.carousel-track {
+.cari {
   flex-wrap: nowrap;
 }
 
-.carousel-btn {
+.carb {
   opacity: 1;
   transition: opacity 0.2s ease;
 }
 
-.carousel-btn:hover {
+.carb:hover {
   opacity: 1.2;
 }
 
-.carousel-btn:disabled {
+.carb:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+.property-images-gallery {
+  width: 100%;
+  overflow-x: hidden; /* Allow horizontal scrolling if needed */
+  padding: 10px;
+  box-sizing: border-box;
 }

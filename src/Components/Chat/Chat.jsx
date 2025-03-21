@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Trash2, Check, Image, X, Maximize2 } from 'lucide-react';
+import { MessageSquare, Trash2, Check, Image, X, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import './ChatCSS.css';
@@ -302,7 +302,7 @@ function Chat({ refresh, onRefreshComplete }) {
                           <Check size={16} />
                         </button>
                       )}
-                      {(item.type === 'home_value' && canDeleteHomeValue(item)) || 
+                      {(item.type === 'home_value' && canDeleteHomeValue(item)) ||
                        (item.type === 'inquiry' && (item.role === 'user' || item.role === 'agent')) ? (
                         <button
                           className="btn btn-sm btn-outline-danger"
@@ -357,7 +357,7 @@ function Chat({ refresh, onRefreshComplete }) {
                       style={{ backgroundColor: '#f0f2f5', borderRadius: '12px' }}
                     >
                       <div
-                        className="carousel-container"
+                        className="carousel-container caro"
                         style={{
                           overflowX: selectedItem.images.length > 3 ? 'hidden' : 'visible',
                           overflowY: 'hidden',
@@ -365,7 +365,7 @@ function Chat({ refresh, onRefreshComplete }) {
                         }}
                       >
                         <div
-                          className="carousel-track"
+                          className="carousel-track cari"
                           style={{
                             display: 'flex',
                             gap: '10px',
@@ -423,7 +423,7 @@ function Chat({ refresh, onRefreshComplete }) {
                       {selectedItem.images.length > 3 && (
                         <>
                           <button
-                            className="carousel-btn carousel-btn-left"
+                            className="carousel-btn carousel-btn-left carb"
                             onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
                             disabled={carouselIndex === 0}
                             style={{
@@ -441,7 +441,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            
+                            <ChevronLeft size={18} />
                           </button>
                           <button
                             className="carousel-btn carousel-btn-right"
@@ -462,7 +462,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            
+                            <ChevronRight size={18} />
                           </button>
                         </>
                       )}
