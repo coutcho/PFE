@@ -23,9 +23,7 @@ export default function Navbar() {
   const API_USERS_URL = "http://localhost:3001/api/users";
   const socket = io("http://localhost:3001");
 
-  // Handle scroll effect for navbar styling
   useEffect(() => {
-    console.log("Setting up scroll listener");
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
     };
@@ -33,9 +31,7 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Handle unread messages and socket connection
   useEffect(() => {
-    console.log("Setting up unread messages check and socket connection");
     const checkUnreadMessages = async () => {
       if (!token) {
         setHasUnreadMessages(false);
@@ -72,13 +68,10 @@ export default function Navbar() {
     return () => {
       socket.off("newMessage");
       socket.disconnect();
-      console.log("Socket connection cleaned up");
     };
   }, [token]);
 
-  // Check if the user is an admin whenever isSignedIn changes
   useEffect(() => {
-    console.log("Checking user role and admin status");
     if (isSignedIn) {
       const token = localStorage.getItem("authToken");
       if (token) {
@@ -86,7 +79,6 @@ export default function Navbar() {
           const decoded = jwtDecode(token);
           setIsAdmin(decoded.role === "admin");
           setUserRole(decoded.role);
-          console.log("Decoded token role:", decoded.role);
         } catch (error) {
           console.error("Error decoding token:", error);
           setIsAdmin(false);
@@ -110,8 +102,7 @@ export default function Navbar() {
     setIsSignedIn(true);
     closeModal();
     window.dispatchEvent(new Event("loginSuccess"));
-    
-    // Get the token from localStorage
+
     const token = localStorage.getItem("authToken");
     if (!token) {
       console.error("No auth token found in localStorage after login");
@@ -119,29 +110,20 @@ export default function Navbar() {
     }
 
     try {
-      // Decode the token
       const decoded = jwtDecode(token);
-      console.log("Decoded token after login:", decoded); // Add logging to check decoded token
       setUserRole(decoded.role);
 
-      // Check role and navigate accordingly
       if (decoded.role === 'expert' || decoded.role === 'agent') {
         navigate('/inbox');
-        console.log("Redirecting to inbox for role:", decoded.role);
       } else {
-        // For other roles, redirect to home page
         navigate('/');
-        console.log("Redirecting to home for role:", decoded.role);
       }
     } catch (error) {
       console.error("Error decoding token:", error);
     }
-
-    console.log("Login successful, event dispatched");
   };
 
   const handleLogout = async () => {
-    console.log("Logout process started");
     try {
       const token = localStorage.getItem("authToken");
       if (token) {
@@ -159,7 +141,6 @@ export default function Navbar() {
       setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
-      console.log("Logout successful, redirected to home");
     } catch (error) {
       console.error("Error during logout:", error);
       localStorage.removeItem("authToken");
@@ -168,7 +149,6 @@ export default function Navbar() {
       setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
-      console.log("Logout failed, still redirected to home");
     }
   };
 
@@ -178,6 +158,8 @@ export default function Navbar() {
       aboutUsSection.scrollIntoView({ behavior: "smooth" });
     }
   };
+
+  const isHomePage = location.pathname === "/";
 
   return (
     <nav
@@ -201,21 +183,13 @@ export default function Navbar() {
         </button>
         <div className="collapse navbar-collapse" id="navbarsExample09">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            {isSignedIn && (userRole === 'expert' || userRole === 'agent') ? (
+            <li className="nav-item">
+              <Link className="nav-link active" aria-current="page" to="/">
+                Home
+              </Link>
+            </li>
+            {!isSignedIn || (userRole !== 'expert' && userRole !== 'agent') ? (
               <>
-                <li className="nav-item">
-                  <Link className="nav-link active" aria-current="page" to="/">
-                    Home
-                  </Link>
-                </li>
-              </>
-            ) : (
-              <>
-                <li className="nav-item">
-                  <Link className="nav-link active" aria-current="page" to="/">
-                    Home
-                  </Link>
-                </li>
                 <li className="nav-item dropdown">
                   <a
                     className="nav-link dropdown-toggle"
@@ -293,35 +267,37 @@ export default function Navbar() {
                     Home Value
                   </Link>
                 </li>
-                <li className="nav-item">
-                  <button className="nav-link" onClick={handleScrollToAboutUs}>
-                    About Us
-                  </button>
-                </li>
+                {isHomePage && (
+                  <li className="nav-item">
+                    <button className="nav-link" onClick={handleScrollToAboutUs}>
+                      About Us
+                    </button>
+                  </li>
+                )}
                 <li className="nav-item">
                   <Link className="nav-link" to="/contact">
                     Contact Us
                   </Link>
                 </li>
               </>
-            )}
+            ) : null}
           </ul>
           <div className="d-flex align-items-center gap-2">
             {isSignedIn ? (
               <>
                 {isAdmin && (
-                  <Link 
-                    to="/admin" 
-                    className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" 
+                  <Link
+                    to="/admin"
+                    className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
                     style={{ width: "40px", height: "40px" }}
                     title="Admin Dashboard"
                   >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      width="16" 
-                      height="16" 
-                      fill="currentColor" 
-                      className="bi bi-speedometer2" 
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      fill="currentColor"
+                      className="bi bi-speedometer2"
                       viewBox="0 0 16 16"
                     >
                       <path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
@@ -339,75 +315,49 @@ export default function Navbar() {
                     Account
                   </button>
                   <ul className="dropdown-menu dropdown-menu-end">
-                    {isSignedIn && (userRole === 'expert' || userRole === 'agent') ? (
-                      <>
-                        <li>
-                          <Link className="dropdown-item" to="/inbox">
-                            Inbox
-                          </Link>
-                        </li>
-                        <li>
-                          <Link className="dropdown-item" to="/profile">
-                            Profile
-                          </Link>
-                        </li>
-                        <li>
-                          <hr className="dropdown-divider" />
-                        </li>
-                        <li>
-                          <button
-                            className="dropdown-item text-danger"
-                            onClick={handleLogout}
-                          >
-                            Logout
-                          </button>
-                        </li>
-                      </>
-                    ) : (
-                      <>
-                        <li>
-                          <Link className="dropdown-item" to="/profile">
-                            Profile
-                          </Link>
-                        </li>
-                        <li>
-                          <Link className="dropdown-item" to="/favorites">
-                            Favorite Listings
-                          </Link>
-                        </li>
-                        <li style={{ position: "relative" }}>
-                          <Link className="dropdown-item" to="/inbox">
-                            Inbox
-                            {hasUnreadMessages && (
-                              <span
-                                style={{
-                                  position: "absolute",
-                                  top: "50%",
-                                  right: "10px",
-                                  transform: "translateY(-50%)",
-                                  width: "8px",
-                                  height: "8px",
-                                  backgroundColor: "red",
-                                  borderRadius: "50%",
-                                  display: "inline-block",
-                                }}
-                              />
-                            )}
-                          </Link>
-                        </li>
-                        <li>
-                          <hr className="dropdown-divider" />
-                        </li>
-                        <li>
-                          <button
-                            className="dropdown-item text-danger"
-                            onClick={handleLogout}
-                          >
-                            Logout
-                          </button>
-                        </li>
-                      </>
+                    <li>
+                      <Link className="dropdown-item" to="/profile">
+                        Profile
+                      </Link>
+                    </li>
+                    {userRole !== 'expert' && userRole !== 'agent' && (
+                      <li>
+                        <Link className="dropdown-item" to="/favorites">
+                          Favorite Listings
+                        </Link>
+                      </li>
                     )}
+                    <li>
+                      <Link className="dropdown-item" to="/inbox">
+                        Inbox
+                        {hasUnreadMessages && (
+                          <span
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              right: "10px",
+                              transform: "translateY(-50%)",
+                              width: "8px",
+                              height: "8px",
+                              backgroundColor: "red",
+                              borderRadius: "50%",
+                              display: "inline-block",
+                            }}
+                          />
+                        )}
+                      </Link>
+                    </li>
+                    <li>
+                      <hr className="dropdown-divider" />
+                    </li>
+                    <li>
+                      <button
+                        className="dropdown-item text-danger"
+                        onClick={handleLogout}
+                      >
+                        Logout
+                      </button>
+                    </li>
                   </ul>
                 </div>
               </>

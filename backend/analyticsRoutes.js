@@ -253,4 +253,73 @@ router.get('/inquiries/per-agent', authenticateToken, isAdmin, async (req, res) 
   }
 });
 
+
+
+// Home Values Expert Stats
+router.get('/home-values/expert-stats', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+          u.id AS expert_id,
+          u.fullname AS expert_name,
+          COUNT(hv.id) AS request_count
+       FROM 
+          users u
+       LEFT JOIN 
+          home_values hv ON u.id = hv.expert_id
+       WHERE 
+          u.role = 'expert'
+       GROUP BY 
+          u.id, u.fullname
+       ORDER BY 
+          request_count DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching expert stats:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch expert stats', details: err.message });
+  }
+});
+
+
+
+// GET /api/properties/most-favorited
+router.get('/most-favorited', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*, COUNT(f.property_id) AS favorite_count
+       FROM properties p
+       LEFT JOIN favorites f ON p.id = f.property_id
+       GROUP BY p.id
+       ORDER BY favorite_count DESC
+       LIMIT 2`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching most favorited properties:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch most favorited properties', details: err.message });
+  }
+});
+
+
+// GET /api/properties/in-algiers
+router.get('/properties/in-algiers', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, location, price, lat, long
+       FROM properties
+       WHERE LOWER(location) LIKE '%algiers%'`
+    );
+    
+    // Filter out any properties that don't have valid coordinates
+    const validProperties = result.rows.filter(property => 
+      property.lat !== null && property.long !== null
+    );
+    
+    res.json(validProperties);
+  } catch (err) {
+    console.error('Error fetching Algiers properties:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch Algiers properties', details: err.message });
+  }
+});
 export default router;
