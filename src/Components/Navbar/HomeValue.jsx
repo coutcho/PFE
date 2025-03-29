@@ -42,13 +42,13 @@ function HomeValueHero() {
     e.preventDefault();
 
     if (!isAuthenticated) {
-      showFeedback('Please sign in to submit a home value request.');
+      showFeedback('Veuillez vous connecter pour soumettre une demande de valeur de maison.');
       setTimeout(() => navigate('/'), 2000);
       return;
     }
 
     if (!address.trim()) {
-      showFeedback('Please enter an address.');
+      showFeedback('Veuillez entrer une adresse.');
       return;
     }
 
@@ -69,20 +69,20 @@ function HomeValueHero() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to submit home value request');
+        throw new Error(errorData.message || 'Échec de la soumission de la demande de valeur de maison');
       }
 
       const data = await response.json();
-      console.log('Server response:', data);
-      showFeedback('Home value request submitted successfully! Experts will review it.', 'success');
-      
+      console.log('Réponse du serveur:', data);
+      showFeedback('Demande de valeur de maison soumise avec succès! Les experts vont l\'examiner.', 'success');
+
       setAddress('');
       setSelectedFiles([]);
-      setCarouselIndex(0); // Reset carousel
+      setCarouselIndex(0); // Réinitialiser le carrousel
       fileInputRef.current.value = null;
     } catch (error) {
-      console.error('Error submitting home value:', error);
-      showFeedback(`Failed to submit home value request: ${error.message}`);
+      console.error('Erreur lors de la soumission de la valeur de la maison:', error);
+      showFeedback(`Échec de la soumission de la demande de valeur de maison: ${error.message}`);
     }
   };
 
@@ -93,12 +93,12 @@ function HomeValueHero() {
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles(prevFiles => [...prevFiles, ...files]);
-    console.log('Files selected:', files);
+    console.log('Fichiers sélectionnés:', files);
   };
 
   const handleRemoveImage = (index) => {
     setSelectedFiles(prevFiles => prevFiles.filter((_, i) => i !== index));
-    // Adjust carousel index if needed
+    // Ajuster l'index du carrousel si nécessaire
     if (carouselIndex > maxIndex - 1) {
       setCarouselIndex(Math.max(0, maxIndex - 1));
     }
@@ -115,12 +115,12 @@ function HomeValueHero() {
   return (
     <div style={heroStyle} className="d-flex align-items-center">
       {feedback.show && (
-        <div 
+        <div
           className={`position-absolute top-0 start-50 translate-middle-x mt-4 alert ${
             feedback.type === 'success' ? 'alert-success' : 'alert-danger'
           } d-flex align-items-center shadow-lg border-0 fade show`}
-          style={{ 
-            zIndex: 1050, 
+          style={{
+            zIndex: 1050,
             maxWidth: '90%',
             width: '500px',
             padding: '16px 20px',
@@ -134,8 +134,8 @@ function HomeValueHero() {
               <i className={`bi ${feedback.type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle'} me-2`}></i>
               {feedback.message}
             </div>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-close"
               onClick={() => setFeedback({ ...feedback, show: false })}
               aria-label="Close"
@@ -143,14 +143,14 @@ function HomeValueHero() {
           </div>
         </div>
       )}
-      
+
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-12 col-md-10 col-lg-8 text-center text-white">
-            <h1 className="display-4 fw-bold mb-4">How much is my home worth?</h1>
+            <h1 className="display-4 fw-bold mb-4">Combien vaut ma maison?</h1>
             <p className="lead mb-5">
-              Enter your address to get your free Zestimate instantly and claim your home,
-              or request a no-obligation market value offer from Zillow.
+              Entrez votre adresse pour obtenir votre Zestimate gratuit instantanément et réclamer votre maison,
+              ou demandez une offre de valeur marchande sans obligation de la part de Zillow.
             </p>
 
             <form onSubmit={handleSubmit} className="mb-4">
@@ -159,10 +159,10 @@ function HomeValueHero() {
                   <input
                     type="text"
                     className="form-control form-control-lg"
-                    placeholder="Enter your home address"
+                    placeholder="Entrez l'adresse de votre maison"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    aria-label="Home address"
+                    aria-label="Adresse de la maison"
                   />
                 </div>
                 <div className="col-6 col-lg-2">
@@ -196,7 +196,7 @@ function HomeValueHero() {
             {/* Image Previews with Carousel */}
             {selectedFiles.length > 0 && (
               <div className="text-start bg-dark bg-opacity-50 p-3 rounded mb-3 position-relative">
-                <p className="mb-2 text-white-50 small">Selected Images:</p>
+                <p className="mb-2 text-white-50 small">Images sélectionnées:</p>
                 <div
                   className="carousel-container"
                   style={{
@@ -224,7 +224,7 @@ function HomeValueHero() {
                       >
                         <img
                           src={URL.createObjectURL(file)}
-                          alt={`Preview ${file.name}`}
+                          alt={`Aperçu ${file.name}`}
                           className="rounded"
                           style={{
                             width: '100%',
@@ -304,7 +304,7 @@ function HomeValueHero() {
           </div>
         </div>
       </div>
-      
+
       <style jsx>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translate(-50%, -20px); }
