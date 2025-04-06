@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Trash2, Check, Image, X, Maximize2 } from 'lucide-react';
+import { MessageSquare, Trash2, Check, Image, X, Maximize2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import './ChatCSS.css';
@@ -17,7 +17,7 @@ function Chat({ refresh, onRefreshComplete }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [messageImages, setMessageImages] = useState([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [discussionClosed, setDiscussionClosed] = useState(false); // Track discussion status
+  const [discussionClosed, setDiscussionClosed] = useState(false);
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const token = localStorage.getItem('authToken');
@@ -51,7 +51,7 @@ function Chat({ refresh, onRefreshComplete }) {
     if (selectedItem) {
       fetchMessages(selectedItem.id, selectedItem.type);
       setCarouselIndex(0);
-      checkDiscussionStatus(); // Check discussion status when item changes
+      checkDiscussionStatus();
     } else {
       setMessages([]);
       setDiscussionClosed(false);
@@ -62,7 +62,7 @@ function Chat({ refresh, onRefreshComplete }) {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
-    checkDiscussionStatus(); // Re-check status when messages update
+    checkDiscussionStatus();
   }, [messages]);
 
   const fetchCurrentUser = async () => {
@@ -138,17 +138,16 @@ function Chat({ refresh, onRefreshComplete }) {
 
   const checkDiscussionStatus = () => {
     if (selectedItem?.type === 'home_value' && selectedItem.expert_id) {
-      // Check if any message's sender_id matches the expert_id
       const expertReplied = messages.some(msg => msg.sender_id === selectedItem.expert_id);
       setDiscussionClosed(expertReplied);
     } else {
-      setDiscussionClosed(false); // Only home_value with an expert can be closed
+      setDiscussionClosed(false);
     }
   };
 
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && messageImages.length === 0) || !selectedItem) return;
-    if (discussionClosed && userRole !== 'expert') return; // Prevent sending if closed and not expert
+    if (discussionClosed && userRole !== 'expert') return;
 
     setIsLoading(true);
     try {
@@ -302,7 +301,7 @@ function Chat({ refresh, onRefreshComplete }) {
                           <Check size={16} />
                         </button>
                       )}
-                      {(item.type === 'home_value' && canDeleteHomeValue(item)) || 
+                      {(item.type === 'home_value' && canDeleteHomeValue(item)) ||
                        (item.type === 'inquiry' && (item.role === 'user' || item.role === 'agent')) ? (
                         <button
                           className="btn btn-sm btn-outline-danger"
@@ -343,12 +342,28 @@ function Chat({ refresh, onRefreshComplete }) {
             selectedItem && (
               <div>
                 <h5 className="mb-3">
-                  {selectedItem.type === 'inquiry'
-                    ? (selectedItem.property_title || `Demande #${selectedItem.id}`)
-                    : `Estimation: ${selectedItem.address}`}
-                  {selectedItem.type === 'home_value' && selectedItem.expert_id ? ' (Réservée)' : ''}
+                  {selectedItem.type === 'inquiry' && (userRole === 'agent' || userRole === 'user') ? (
+                    <a
+                      href={`/listing/${selectedItem.property_id }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        navigate(`/listing/${selectedItem.property_id || selectedItem.id}`);
+                      }}
+                      style={{ textDecoration: 'none', color: '#007bff', cursor: 'pointer' }}
+                      onMouseOver={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseOut={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      {selectedItem.property_title || `Demande #${selectedItem.id}`}
+                    </a>
+                  ) : (
+                    <>
+                      {selectedItem.type === 'inquiry'
+                        ? (selectedItem.property_title || `Demande #${selectedItem.id}`)
+                        : `Estimation: ${selectedItem.address}`}
+                      {selectedItem.type === 'home_value' && selectedItem.expert_id ? ' (Réservée)' : ''}
+                    </>
+                  )}
                 </h5>
-
                 {selectedItem.images && selectedItem.images.length > 0 && (
                   <div className="mb-4">
                     <h6 className="mb-2">Images du bien:</h6>
@@ -357,7 +372,7 @@ function Chat({ refresh, onRefreshComplete }) {
                       style={{ backgroundColor: '#f0f2f5', borderRadius: '12px' }}
                     >
                       <div
-                        className="carousel-container"
+                        className="carousel-container caro"
                         style={{
                           overflowX: selectedItem.images.length > 3 ? 'hidden' : 'visible',
                           overflowY: 'hidden',
@@ -365,7 +380,7 @@ function Chat({ refresh, onRefreshComplete }) {
                         }}
                       >
                         <div
-                          className="carousel-track"
+                          className="carousel-track cari"
                           style={{
                             display: 'flex',
                             gap: '10px',
@@ -423,7 +438,7 @@ function Chat({ refresh, onRefreshComplete }) {
                       {selectedItem.images.length > 3 && (
                         <>
                           <button
-                            className="carousel-btn carousel-btn-left"
+                            className="carousel-btn carousel-btn-left carb"
                             onClick={() => setCarouselIndex(Math.max(0, carouselIndex - 1))}
                             disabled={carouselIndex === 0}
                             style={{
@@ -441,7 +456,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            
+                            <ChevronLeft size={18} />
                           </button>
                           <button
                             className="carousel-btn carousel-btn-right"
@@ -462,7 +477,7 @@ function Chat({ refresh, onRefreshComplete }) {
                               zIndex: 1,
                             }}
                           >
-                            
+                            <ChevronRight size={18} />
                           </button>
                         </>
                       )}
@@ -612,7 +627,7 @@ function Chat({ refresh, onRefreshComplete }) {
                                 border: `1px solid ${msg.is_read ? '#28a745' : '#6c757d'}`,
                                 marginLeft: '4px',
                               }}
-                            ></span>
+                            />
                             <span style={{ fontSize: '0.7rem' }}>{msg.is_read ? 'Lu' : 'Non lu'}</span>
                           </div>
                         </div>

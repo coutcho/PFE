@@ -13,7 +13,7 @@ function Properties() {
   const [propertyType, setPropertyType] = useState('');
   const [isEquipped, setIsEquipped] = useState(false);
   const [agents, setAgents] = useState([]);
-  const [selectedAgentId, setSelectedAgentId] = useState(''); // New state for agent dropdown
+  const [selectedAgentId, setSelectedAgentId] = useState('');
   const fileInputRef = useRef(null);
 
   const API_BASE_URL = 'http://localhost:3001/api/properties';
@@ -21,7 +21,7 @@ function Properties() {
   const token = localStorage.getItem('authToken');
   const baseUrl = 'http://localhost:3001';
 
-  // Fetch Properties on Mount
+  // Fetch Properties on Mount (including sold properties)
   useEffect(() => {
     const fetchProperties = async () => {
       if (!token) {
@@ -30,7 +30,7 @@ function Properties() {
         return;
       }
       try {
-        const response = await fetch(API_BASE_URL, {
+        const response = await fetch(`${API_BASE_URL}?include_sold=true`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
@@ -87,11 +87,11 @@ function Properties() {
     if (editingProperty) {
       setPropertyType(editingProperty.type || '');
       setIsEquipped(editingProperty.equipped || false);
-      setSelectedAgentId(editingProperty.agent_id ? editingProperty.agent_id.toString() : ''); // Sync agent_id
+      setSelectedAgentId(editingProperty.agent_id ? editingProperty.agent_id.toString() : '');
     } else {
       setPropertyType('');
       setIsEquipped(false);
-      setSelectedAgentId(''); // Reset when not editing
+      setSelectedAgentId('');
     }
   }, [editingProperty]);
 
@@ -176,8 +176,7 @@ function Properties() {
     formData.append('location', e.target.location.value);
     formData.append('type', propertyType);
     
-    // Add agent_id to form data
-    formData.append('agent_id', selectedAgentId); // Use controlled state value
+    formData.append('agent_id', selectedAgentId);
 
     const bedroomsValue = e.target.bedrooms.value;
     const parsedBedrooms = parseInt(bedroomsValue);
@@ -296,7 +295,7 @@ function Properties() {
       setFeatureInput('');
       setPropertyType('');
       setIsEquipped(false);
-      setSelectedAgentId(''); // Reset agent selection
+      setSelectedAgentId('');
       previewUrls.forEach(preview => {
         if (!preview.isExisting) {
           URL.revokeObjectURL(preview.url);
@@ -409,15 +408,14 @@ function Properties() {
                     <option value="bureau">Bureau</option>
                   </select>
                 </div>
-                {/* Agent Selection Dropdown */}
                 <div className="mb-3">
                   <label htmlFor="agent" className="form-label">Assigned Agent</label>
                   <select
                     className="form-select"
                     id="agent"
                     name="agent"
-                    value={selectedAgentId} // Controlled value
-                    onChange={(e) => setSelectedAgentId(e.target.value)} // Update state on change
+                    value={selectedAgentId}
+                    onChange={(e) => setSelectedAgentId(e.target.value)}
                   >
                     <option value="">No Agent</option>
                     {agents.map(agent => (
@@ -427,7 +425,6 @@ function Properties() {
                     ))}
                   </select>
                 </div>
-                {/* Bootstrap Switch Toggle for Equipped Status */}
                 <div className="mb-3 form-check form-switch d-flex align-items-center">
                   <input
                     type="checkbox"

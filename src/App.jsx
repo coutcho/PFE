@@ -1,4 +1,3 @@
-// src/App.jsx
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from "jwt-decode";
@@ -10,11 +9,12 @@ import Chat from './Components/Chat/Chat';
 import Profile from './Components/Navbar/Profile';
 import FavoritesPage from './Components/Navbar/FavoritesListings';
 import Contact from './Components/Navbar/Contact';
-import HomeValue from './Components/Navbar/HomeValue'; // Import HomeValue
+import HomeValue from './Components/Navbar/HomeValue';
 import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import PropertyListings from './Components/Body/PropertyListings';
+import NewestListings from './Components/Body/NewestListings';
 import AllListings from './Components/Body/AllListings';
 import Footer from './Components/Footer/Footer';
 import ListingPage from './Components/ListingPage/ListingPage';
@@ -81,7 +81,10 @@ export default function App() {
                   <SearchBar />
                 </div>
                 <div className="bg-light bg-gray-100">
-                  <PropertyListings />
+                  <NewestListings />
+                  <div className="bg-white">
+                    <PropertyListings />
+                  </div>
                   <AboutUS />
                 </div>
                 <Footer />
@@ -143,7 +146,7 @@ export default function App() {
             }
           />
           <Route
-            path="/home-value" // New Home Value route
+            path="/home-value"
             element={
               <Layout onSignInTrigger={(fn) => setOpenSignIn(() => fn)}>
                 <HomeValue />

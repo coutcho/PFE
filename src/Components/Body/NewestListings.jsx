@@ -6,43 +6,64 @@ import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import '../../App.css';
 import { FaChevronLeft, FaChevronRight, FaStar } from 'react-icons/fa';
-// Import the external CSS file
 import './CarouselStyles.css';
 
-const PropertyListings = () => {
+const NewestListings = () => {
   const sliderRef = useRef(null);
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeSlide, setActiveSlide] = useState(0);
-  const token = localStorage.getItem('authToken');
 
-  // Fetch properties from the backend
+  // Fetch newest listings from the backend
   useEffect(() => {
     const fetchProperties = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:3001/api/analytics/most-favorited-home', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+
+        const response = await fetch('http://localhost:3001/api/analytics/newest-listings');
+
         if (!response.ok) {
-          throw new Error('Failed to fetch properties');
+          const contentType = response.headers.get('Content-Type');
+          let errorData = {};
+
+          if (contentType && contentType.includes('application/json')) {
+            errorData = await response.json();
+          } else {
+            const errorText = await response.text();
+            console.error('Non-JSON response:', errorText.slice(0, 100));
+            errorData = { message: 'Unexpected response format' };
+          }
+
+          console.error('Fetch error response:', {
+            status: response.status,
+            statusText: response.statusText,
+            body: errorData,
+          });
+
+          throw new Error(`Failed to fetch newest listings: ${response.status} ${response.statusText}`);
         }
+
+        const contentType = response.headers.get('Content-Type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const errorText = await response.text();
+          console.error('Non-JSON response:', errorText.slice(0, 100));
+          throw new Error('Response is not valid JSON');
+        }
+
         const data = await response.json();
         setProperties(data);
         setError(null);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching properties:', err);
+        console.error('Error fetching newest listings:', err);
       } finally {
         setLoading(false);
       }
     };
     fetchProperties();
-  }, [token]);
+  }, []);
 
   // Handle keyboard navigation for accessibility
   useEffect(() => {
@@ -132,7 +153,7 @@ const PropertyListings = () => {
       <div className="spinner-border text-primary" role="status">
         <span className="visually-hidden">Loading...</span>
       </div>
-      <p className="mt-2">Loading properties...</p>
+      <p className="mt-2">Loading newest listings...</p>
     </div>
   );
 
@@ -151,7 +172,7 @@ const PropertyListings = () => {
   if (properties.length === 0) {
     return (
       <div className="container py-5 text-center">
-        <p>No properties available at the moment.</p>
+        <p>No newest listings available at the moment.</p>
       </div>
     );
   }
@@ -159,15 +180,14 @@ const PropertyListings = () => {
   return (
     <div className="container py-5">
       <div className="d-flex justify-content-center align-items-center mb-4">
-        <h2>Les Plus Populaires</h2>
-        {/* Removed the Next and Previous buttons */}
+        <h2>Nouvelles Annonces</h2>
       </div>
       
       <div className="row justify-content-center">
         <div 
           className="col-12 position-relative carousel-container" 
           tabIndex="0" 
-          aria-label="Property listings carousel"
+          aria-label="Newest property listings carousel"
         >
           <Slider ref={sliderRef} {...settings}>
             {properties.map((property) => (
@@ -189,12 +209,10 @@ const PropertyListings = () => {
               </div>
             ))}
           </Slider>
-          
-          {/* Removed the "Showing X of Y properties" counter */}
         </div>
       </div>
     </div>
   );
 };
 
-export default PropertyListings;
+export default NewestListings;

@@ -1,4 +1,3 @@
-// src/Components/Body/PropertyCard.jsx
 import { motion } from 'framer-motion';
 import { FaHeart, FaRegHeart, FaBed, FaBath, FaRuler, FaBuilding, FaChair } from 'react-icons/fa';
 import { useFavorites } from './FavoritesContext.jsx';
@@ -18,6 +17,15 @@ const PropertyCard = ({ property, onClick }) => {
     } else {
       addFavorite(property);
     }
+  };
+
+  // Function to translate status to French
+  const getFrenchStatus = (status) => {
+    if (!status) return 'Unknown';
+    const lowerCaseStatus = status.toLowerCase();
+    if (lowerCaseStatus === 'active') return 'À vendre';
+    if (lowerCaseStatus === 'for rent') return 'À louer';
+    return status; // Return original status if not recognized
   };
 
   const imageSrc = property.images_path && Array.isArray(property.images_path) && property.images_path.length > 0 
@@ -47,7 +55,7 @@ const PropertyCard = ({ property, onClick }) => {
           style={{ height: '200px', objectFit: 'cover' }}
         />
         <span className="position-absolute top-0 start-0 m-2 badge bg-primary">
-          {property.status || 'Unknown'}
+          {getFrenchStatus(property.status)}
         </span>
         <button
           className="position-absolute top-0 end-0 m-2 btn btn-light rounded-circle p-2"

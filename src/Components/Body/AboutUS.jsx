@@ -1,5 +1,5 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './aboutus.css'
+import './aboutus.css';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 
 function AboutUS() {
@@ -51,7 +51,7 @@ function AboutUS() {
         </div>
 
         {/* Team Section */}
-        <div className="row mt-5">
+        <div className="row mt-5 justify-content-center">
           <div className="col-12">
             <h2 className="text-center mb-5">Notre Équipe de Direction</h2>
           </div>
@@ -59,7 +59,7 @@ function AboutUS() {
             <div className="card text-center">
               <div className="card-body">
                 <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>
-                <h5 className="card-title">John Smith</h5>
+                <h5 className="card-title">Zekara Merouane</h5>
                 <p className="card-text text-muted">PDG et Fondateur</p>
                 <p className="card-text">Plus de 20 ans d'expertise immobilière</p>
               </div>
@@ -69,19 +69,9 @@ function AboutUS() {
             <div className="card text-center">
               <div className="card-body">
                 <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>
-                <h5 className="card-title">Sarah Johnson</h5>
-                <p className="card-text text-muted">Directrice des Ventes</p>
+                <h5 className="card-title">Adjina Rayan</h5>
+                <p className="card-text text-muted">Directeur des Ventes</p>
                 <p className="card-text">Plus de 15 ans d'expérience en vente</p>
-              </div>
-            </div>
-          </div>
-          <div className="col-lg-4 mb-4 cardina">
-            <div className="card text-center">
-              <div className="card-body">
-                <i className="fas fa-user-circle fa-4x text-primary mb-3"></i>
-                <h5 className="card-title">Michael Brown</h5>
-                <p className="card-text text-muted">Gestionnaire Immobilier</p>
-                <p className="card-text">Plus de 12 ans en gestion immobilière</p>
               </div>
             </div>
           </div>

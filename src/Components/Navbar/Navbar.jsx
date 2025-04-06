@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { jwtDecode } from "jwt-decode"; // Import jwtDecode for decoding the token
+import { jwtDecode } from "jwt-decode";
 import io from "socket.io-client";
 import "./Navbar.css";
 import SignInModal from "./SignInModal";
@@ -13,17 +13,16 @@ export default function Navbar() {
   const [showSignUpModal, setShowSignUpModal] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(!!localStorage.getItem("authToken"));
-  const [isAdmin, setIsAdmin] = useState(false); // New state to track admin status
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const isHomePage = location.pathname === "/";
   const token = localStorage.getItem("authToken");
   const API_INQUIRIES_URL = "http://localhost:3001/api/inquiries";
   const API_USERS_URL = "http://localhost:3001/api/users";
   const socket = io("http://localhost:3001");
 
-  // Handle scroll effect for navbar styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
@@ -32,7 +31,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Handle unread messages and socket connection
   useEffect(() => {
     const checkUnreadMessages = async () => {
       if (!token) {
@@ -73,7 +71,6 @@ export default function Navbar() {
     };
   }, [token]);
 
-  // Check if the user is an admin whenever isSignedIn changes
   useEffect(() => {
     if (isSignedIn) {
       const token = localStorage.getItem("authToken");
@@ -81,6 +78,7 @@ export default function Navbar() {
         try {
           const decoded = jwtDecode(token);
           setIsAdmin(decoded.role === "admin");
+          setUserRole(decoded.role);
         } catch (error) {
           console.error("Error decoding token:", error);
           setIsAdmin(false);
@@ -90,6 +88,7 @@ export default function Navbar() {
       }
     } else {
       setIsAdmin(false);
+      setUserRole(null);
     }
   }, [isSignedIn]);
 
@@ -103,7 +102,25 @@ export default function Navbar() {
     setIsSignedIn(true);
     closeModal();
     window.dispatchEvent(new Event("loginSuccess"));
-    console.log("Login successful, event dispatched");
+
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error("No auth token found in localStorage after login");
+      return;
+    }
+
+    try {
+      const decoded = jwtDecode(token);
+      setUserRole(decoded.role);
+
+      if (decoded.role === 'expert' || decoded.role === 'agent') {
+        navigate('/inbox');
+      } else {
+        navigate('/');
+      }
+    } catch (error) {
+      console.error("Error decoding token:", error);
+    }
   };
 
   const handleLogout = async () => {
@@ -120,14 +137,16 @@ export default function Navbar() {
       }
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
-      setIsAdmin(false); // Reset admin status on logout
+      setIsAdmin(false);
+      setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
     } catch (error) {
       console.error("Error during logout:", error);
       localStorage.removeItem("authToken");
       setIsSignedIn(false);
-      setIsAdmin(false); // Reset admin status on logout
+      setIsAdmin(false);
+      setUserRole(null);
       setHasUnreadMessages(false);
       navigate("/");
     }
@@ -140,13 +159,15 @@ export default function Navbar() {
     }
   };
 
+  const isHomePage = location.pathname === "/";
+
   return (
     <nav
-      className={`navbar navbar-expand-lg bg-body-tertiary ${scrolled ? "scrolled" : ""}`}
+      className={`navbar navbar-expand-lg bg-white ${scrolled ? "scrolled" : ""}`}
       aria-label="Eleventh navbar example"
     >
       <div className="container-fluid">
-        <Link className="navbar-brand" to="/">
+        <Link className="navbar-brand" to="#">
           Darek
         </Link>
         <button
@@ -162,173 +183,188 @@ export default function Navbar() {
         </button>
         <div className="collapse navbar-collapse" id="navbarsExample09">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
-              <Link className="nav-link active" aria-current="page" to="/">
-                Home
-              </Link>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Louer
-              </a>
-              <ul className="dropdown-menu">
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=appartement&engagement=location"
-                  >
-                    Appartement
+            {!isSignedIn || (userRole !== 'expert' && userRole !== 'agent' && userRole !== 'admin') ? (
+              <>
+                <li className="nav-item">
+                  <Link className="nav-link active" aria-current="page" to="/">
+                    Home
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=villa&engagement=location"
+                <li className="nav-item dropdown">
+                  <a
+                    className="nav-link dropdown-toggle"
+                    href="#"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
                   >
-                    Villa
+                    Louer
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=appartement&engagement=location"
+                      >
+                        Appartement
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=villa&engagement=location"
+                      >
+                        Villa
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=bureau&engagement=location"
+                      >
+                        Bureau
+                      </Link>
+                    </li>
+                  </ul>
+                </li>
+                <li className="nav-item dropdown">
+                  <a
+                    className="nav-link dropdown-toggle"
+                    href="#"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false"
+                  >
+                    Acheter
+                  </a>
+                  <ul className="dropdown-menu">
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=appartement&engagement=achat"
+                      >
+                        Appartement
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=villa&engagement=achat"
+                      >
+                        Villa
+                      </Link>
+                    </li>
+                    <li>
+                      <Link
+                        className="dropdown-item"
+                        to="/listings?type=bureau&engagement=achat"
+                      >
+                        Bureau
+                      </Link>
+                    </li>
+                  </ul>
+                </li>
+                <li className="nav-item">
+                  <Link className="nav-link" to="/home-value">
+                    Home Value
                   </Link>
                 </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=bureau&engagement=location"
-                  >
-                    Bureau
+                {isHomePage && (
+                  <li className="nav-item">
+                    <button className="nav-link" onClick={handleScrollToAboutUs}>
+                      About Us
+                    </button>
+                  </li>
+                )}
+                <li className="nav-item">
+                  <Link className="nav-link" to="/contact">
+                    Contact Us
                   </Link>
                 </li>
-              </ul>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="#"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Acheter
-              </a>
-              <ul className="dropdown-menu">
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=appartement&engagement=achat"
-                  >
-                    Appartement
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=villa&engagement=achat"
-                  >
-                    Villa
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    className="dropdown-item"
-                    to="/listings?type=bureau&engagement=achat"
-                  >
-                    Bureau
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            {isHomePage && (
-              <li className="nav-item">
-                <button className="nav-link" onClick={handleScrollToAboutUs}>
-                  About Us
-                </button>
-              </li>
-            )}
-            <li className="nav-item">
-              <Link className="nav-link" to="/contact">
-                Contact Us
-              </Link>
-            </li>
+              </>
+            ) : null}
           </ul>
           <div className="d-flex align-items-center gap-2">
             {isSignedIn ? (
               <>
-                {/* Updated Dashboard button for admins with icon and rounded shape */}
-                {isAdmin && (
-                  <Link 
-                    to="/admin" 
-                    className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center" 
-                    style={{ width: "40px", height: "40px" }}
-                    title="Admin Dashboard"
-                  >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      width="16" 
-                      height="16" 
-                      fill="currentColor" 
-                      className="bi bi-speedometer2" 
-                      viewBox="0 0 16 16"
+                {isAdmin ? (
+                  <>
+                    <Link
+                      to="/admin"
+                      className="btn btn-primary rounded-circle d-flex align-items-center justify-content-center"
+                      style={{ width: "40px", height: "40px" }}
+                      title="Admin Dashboard"
                     >
-                      <path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
-                      <path fillRule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A7.99 7.99 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/>
-                    </svg>
-                  </Link>
-                )}
-                <div className="dropdown">
-                  <button
-                    className="btn btn-primary dropdown-toggle"
-                    type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                  >
-                    Account
-                  </button>
-                  <ul className="dropdown-menu dropdown-menu-end">
-                    <li>
-                      <Link className="dropdown-item" to="/profile">
-                        Profile
-                      </Link>
-                    </li>
-                    <li>
-                      <Link className="dropdown-item" to="/favorites">
-                        Favorite Listings
-                      </Link>
-                    </li>
-                    <li style={{ position: "relative" }}>
-                      <Link className="dropdown-item" to="/inbox">
-                        Inbox
-                        {hasUnreadMessages && (
-                          <span
-                            style={{
-                              position: "absolute",
-                              top: "50%",
-                              right: "10px",
-                              transform: "translateY(-50%)",
-                              width: "8px",
-                              height: "8px",
-                              backgroundColor: "red",
-                              borderRadius: "50%",
-                              display: "inline-block",
-                            }}
-                          />
-                        )}
-                      </Link>
-                    </li>
-                    <li>
-                      <hr className="dropdown-divider" />
-                    </li>
-                    <li>
-                      <button
-                        className="dropdown-item text-danger"
-                        onClick={handleLogout}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        fill="currentColor"
+                        className="bi bi-speedometer2"
+                        viewBox="0 0 16 16"
                       >
-                        Logout
+                        <path d="M8 4a.5.5 0 0 1 .5.5V6a.5.5 0 0 1-1 0V4.5A.5.5 0 0 1 8 4M3.732 5.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707M2 10a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 10m9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5m.754-4.246a.39.39 0 0 0-.527-.02L7.547 9.31a.91.91 0 1 0 1.302 1.258l3.434-4.297a.39.39 0 0 0-.029-.518z"/>
+                        <path fillRule="evenodd" d="M0 10a8 8 0 1 1 15.547 2.661c-.442 1.253-1.845 1.602-2.932 1.25C11.309 13.488 9.475 13 8 13c-1.474 0-3.31.488-4.615.911-1.087.352-2.49.003-2.932-1.25A7.99 7.99 0 0 1 0 10m8-7a7 7 0 0 0-6.603 9.329c.203.575.923.876 1.68.63C4.397 12.533 6.358 12 8 12s3.604.532 4.923.96c.757.245 1.477-.056 1.68-.631A7 7 0 0 0 8 3"/>
+                      </svg>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <div className="dropdown">
+                      <button
+                        className="btn btn-primary dropdown-toggle"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                      >
+                        Account
                       </button>
-                    </li>
-                  </ul>
-                </div>
+                      <ul className="dropdown-menu dropdown-menu-end">
+                        <li>
+                          <Link className="dropdown-item" to="/profile">
+                            Profile
+                          </Link>
+                        </li>
+                        {userRole !== 'expert' && userRole !== 'agent' && (
+                          <li>
+                            <Link className="dropdown-item" to="/favorites">
+                              Favorite Listings
+                            </Link>
+                          </li>
+                        )}
+                        <li>
+                          <Link className="dropdown-item" to="/inbox">
+                            Inbox
+                            {hasUnreadMessages && (
+                              <span
+                                style={{
+                                  position: "absolute",
+                                  top: "50%",
+                                  right: "10px",
+                                  transform: "translateY(-50%)",
+                                  width: "8px",
+                                  height: "8px",
+                                  backgroundColor: "red",
+                                  borderRadius: "50%",
+                                  display: "inline-block",
+                                }}
+                              />
+                            )}
+                          </Link>
+                        </li>
+                        <li>
+                          <hr className="dropdown-divider" />
+                        </li>
+                        <li>
+                          <button
+                            className="dropdown-item text-danger"
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <>

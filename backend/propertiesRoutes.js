@@ -39,9 +39,8 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// **GET /api/properties** - Fetch all properties with optional type filter
 router.get('/', async (req, res) => {
-  const { type } = req.query;
+  const { type, status, include_sold } = req.query; // Add include_sold
   try {
     let query = `
       SELECT id, title, price, location, type, bedrooms, bathrooms, etage, 
@@ -50,12 +49,29 @@ router.get('/', async (req, res) => {
       FROM properties
     `;
     const values = [];
+    let conditions = [];
 
     if (type) {
-      query += ' WHERE type = $1';
+      conditions.push('type = $' + (values.length + 1));
       values.push(type);
     }
 
+    // Only apply status filter if include_sold is not 'true'
+    if (include_sold !== 'true') {
+      if (status) {
+        conditions.push('TRIM(LOWER(status)) = $' + (values.length + 1));
+        values.push(status.toLowerCase().trim());
+      } else {
+        conditions.push('TRIM(LOWER(status)) != $' + (values.length + 1));
+        values.push('sold');
+      }
+    }
+
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    console.log('Executing query:', query, 'with values:', values);
     const result = await pool.query(query, values);
     console.log('Query result:', result.rows);
     res.json(result.rows);
@@ -64,21 +80,20 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // **GET /api/properties/favorites** - Get the authenticated user's favorite properties
 router.get('/favorites', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.id; // Extracted from JWT by authenticateToken
+    const userId = req.user.id;
     const query = `
       SELECT p.id, p.title, p.price, p.location, p.type, p.bedrooms, p.bathrooms, p.etage, 
              p.square_footage, p.description, p.features, p.status, p.lat, p.long, 
              p.images_path, p.equipe AS equipped, p.user_id AS agent_id, p.created_at 
       FROM properties p
       JOIN favorites f ON p.id = f.property_id
-      WHERE f.user_id = $1
+      WHERE f.user_id = $1 AND LOWER(p.status) != $2
     `;
-    const result = await pool.query(query, [userId]);
-    res.json(result.rows); // Returns an array of favorite property objects
+    const result = await pool.query(query, [userId, 'sold']);
+    res.json(result.rows);
   } catch (err) {
     console.error('Error fetching favorites:', err);
     res.status(500).json({ error: err.message });
@@ -222,19 +237,17 @@ router.post('/favorites', authenticateToken, async (req, res) => {
   }
   const userId = req.user.id;
   try {
-    // Check if the favorite already exists to prevent duplicates
     const checkQuery = 'SELECT COUNT(*) FROM favorites WHERE user_id = $1 AND property_id = $2';
     const checkResult = await pool.query(checkQuery, [userId, propertyId]);
     if (parseInt(checkResult.rows[0].count) > 0) {
       return res.status(400).json({ error: 'Favorite already exists' });
     }
-    // Insert the new favorite
     const insertQuery = 'INSERT INTO favorites (user_id, property_id) VALUES ($1, $2)';
     await pool.query(insertQuery, [userId, propertyId]);
     res.status(201).json({ message: 'Favorite added' });
   } catch (err) {
     console.error('Error adding favorite:', err);
-    if (err.code === '23503') { // PostgreSQL foreign key violation
+    if (err.code === '23503') {
       return res.status(400).json({ error: 'Property not found' });
     }
     res.status(500).json({ error: err.message });

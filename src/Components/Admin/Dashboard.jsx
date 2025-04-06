@@ -1,27 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Home, DollarSign, Building, MapPin, User, Star } from 'lucide-react';
-import { Line } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-} from 'chart.js';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
+import './styles.css';
+import { useNavigate } from 'react-router-dom';
 
 // Utility function for authenticated API calls
 const fetchWithAuth = async (url, options = {}) => {
@@ -44,35 +27,52 @@ const fetchWithAuth = async (url, options = {}) => {
 };
 
 // StatCard Component
-const StatCard = ({ title, value, icon: Icon }) => {
+const StatCard = ({ title, value, icon: Icon, color }) => {
   return (
-    <div className="card shadow-sm h-100">
-      <div className="card-body d-flex align-items-center">
-        <Icon size={24} className="me-3 text-primary" />
-        <div>
-          <h6 className="card-subtitle mb-2 text-muted">{title}</h6>
-          <h2 className="card-title mb-0">{value}</h2>
+    <div className={`card border-0 shadow-sm h-100 stat-card ${color}`}>
+      <div className="card-body">
+        <div className="d-flex align-items-center mb-3">
+          <div className="icon-circle me-3">
+            <Icon size={24} />
+          </div>
+          <h6 className="card-subtitle text-muted mb-0">{title}</h6>
         </div>
+        <h2 className="card-title display-6 mb-0 fw-bold">{value}</h2>
       </div>
     </div>
   );
 };
 
 // PropertyCard Component
-const PropertyCard = ({ name, location, agent, image }) => {
+const PropertyCard = ({ property, onClick }) => {
+  if (!property) return <div>Loading property...</div>;
+
+  const imageSrc = property.images_path && Array.isArray(property.images_path) && property.images_path.length > 0
+    ? `http://localhost:3001/${property.images_path[0]}`
+    : 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800';
+
   return (
-    <div className="card shadow-sm h-100 transition-shadow hover-shadow">
-      <img src={image} className="card-img-top" alt={name} style={{ height: '200px', objectFit: 'cover' }} />
+    <div className="card h-100 property-card border-0 shadow-sm" onClick={() => onClick(property.id)}>
+      <div className="position-relative">
+        <img
+          src={imageSrc}
+          className="card-img-top"
+          alt={property.name || 'Property Image'}
+          style={{ height: '200px', objectFit: 'cover' }}
+        />
+        {property.favorite_count && (
+          <span className="position-absolute top-0 end-0 m-2 badge bg-primary">
+            <Star size={14} className="me-1" />
+            {property.favorite_count}
+          </span>
+        )}
+      </div>
       <div className="card-body">
-        <h5 className="card-title">{name}</h5>
-        <p className="card-text text-muted">
-          <MapPin size={16} className="me-1" />
-          {location}
+        <h5 className="card-title mb-2">{property.name || 'Untitled Property'}</h5>
+        <p className="card-text text-muted d-flex align-items-center">
+          <MapPin size={16} className="me-2" />
+          {property.location || 'Unknown Location'}
         </p>
-        <div className="d-flex align-items-center mt-3">
-          <User size={16} className="me-2" />
-          <span>{agent}</span>
-        </div>
       </div>
     </div>
   );
@@ -81,12 +81,20 @@ const PropertyCard = ({ name, location, agent, image }) => {
 // AgentCard Component
 const AgentCard = ({ name, avatar, rating, bio }) => {
   return (
-    <div className="card shadow-sm mb-3">
+    <div className="card border-0 shadow-sm mb-3 agent-card">
       <div className="card-body">
         <div className="d-flex align-items-center">
-          <img src={avatar} alt={name} className="rounded-circle me-3" width="50" height="50" />
+          <div className="agent-avatar me-3">
+            <img
+              src={avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'}
+              alt={name}
+              className="rounded-circle"
+              width="60"
+              height="60"
+            />
+          </div>
           <div>
-            <h6 className="mb-0">{name}</h6>
+            <h6 className="mb-1 fw-bold">{name}</h6>
             <div className="text-warning">
               {[...Array(rating)].map((_, i) => (
                 <Star key={i} size={14} fill="currentColor" />
@@ -94,7 +102,7 @@ const AgentCard = ({ name, avatar, rating, bio }) => {
             </div>
           </div>
         </div>
-        <p className="card-text mt-2 small text-muted">{bio}</p>
+        <p className="card-text mt-3 text-muted small">{bio}</p>
       </div>
     </div>
   );
@@ -103,18 +111,18 @@ const AgentCard = ({ name, avatar, rating, bio }) => {
 // MessageList Component
 const MessageList = ({ messages }) => {
   return (
-    <div className="card shadow-sm">
-      <div className="card-header bg-white">
-        <h5 className="mb-0">Recent Messages</h5>
+    <div className="card border-0 shadow-sm">
+      <div className="card-header bg-white border-0">
+        <h5 className="mb-0 fw-bold">Recent Messages</h5>
       </div>
       <div className="card-body p-0">
         {messages.map((message, index) => (
-          <div key={index} className="p-3 border-bottom">
-            <div className="d-flex justify-content-between align-items-center mb-1">
-              <h6 className="mb-0">{message.user}</h6>
+          <div key={index} className="p-3 border-bottom message-item">
+            <div className="d-flex justify-content-between align-items-center mb-2">
+              <h6 className="mb-0 fw-bold">{message.user}</h6>
               <small className="text-muted">{message.timestamp}</small>
             </div>
-            <p className="mb-0 small text-muted">{message.message}</p>
+            <p className="mb-0 text-muted">{message.message}</p>
           </div>
         ))}
       </div>
@@ -122,20 +130,96 @@ const MessageList = ({ messages }) => {
   );
 };
 
-// Chart Component
-const Chart = ({ data }) => {
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      title: { display: true, text: 'New Properties Over Time' }
-    }
-  };
+// Map Component
+const AlgiersMap = ({ properties }) => {
+  const defaultCenter = [36.7783, 3.0757];
 
   return (
-    <div className="card shadow-sm">
+    <div className="card border-0 shadow-sm">
+      <div className="card-header bg-white border-0">
+        <h5 className="mb-0 fw-bold">Apartments Around Algiers</h5>
+      </div>
+      <div className="card-body p-0">
+        <MapContainer
+          center={defaultCenter}
+          zoom={12}
+          style={{ height: '400px', width: '100%' }}
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          {properties.map((property) => {
+            if (!property.lat || !property.long) return null;
+            return (
+              <Marker
+                key={property.id}
+                position={[property.lat, property.long]}
+              >
+                <Popup>
+                  <div>
+                    <h5>{property.name}</h5>
+                    <p>{property.location}</p>
+                    <p>{property.price} DA</p>
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
+    </div>
+  );
+};
+
+// ExpertStats Component
+const ExpertStats = ({ expertStats, loadingExpertStats, errorExpertStats }) => {
+  if (loadingExpertStats) {
+    return <div className="text-center py-4">Loading expert statistics...</div>;
+  }
+
+  if (errorExpertStats) {
+    return <div className="alert alert-danger">{errorExpertStats}</div>;
+  }
+
+  const maxRequests = Math.max(...expertStats.map(expert => expert.request_count)) || 1;
+
+  return (
+    <div className="card border-0 shadow-sm mb-4">
+      <div className="card-header bg-white border-0">
+        <h5 className="mb-0 fw-bold">Expert Statistics</h5>
+      </div>
       <div className="card-body">
-        <Line options={options} data={data} />
+        <div className="table-responsive">
+          <table className="table table-hover">
+            <thead>
+              <tr>
+                <th>Expert Name</th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {expertStats.map((expert) => {
+                const performanceRating = Math.round((expert.request_count / maxRequests) * 5);
+                return (
+                  <tr key={expert.expert_id}>
+                    <td className="fw-medium">{expert.expert_name}</td>
+                    <td>
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < performanceRating ? 'text-warning' : 'text-muted'}
+                          fill={i < performanceRating ? 'currentColor' : 'none'}
+                        />
+                      ))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -149,11 +233,18 @@ function App() {
   const [popularProperties, setPopularProperties] = useState([]);
   const [topAgents, setTopAgents] = useState([]);
   const [recentMessages, setRecentMessages] = useState([]);
-  const [chartData, setChartData] = useState({ labels: [], datasets: [] });
+  const [algiersProperties, setAlgiersProperties] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('authToken'));
   const [userRole, setUserRole] = useState(null);
+
+  // New state for expert statistics
+  const [expertStats, setExpertStats] = useState([]);
+  const [loadingExpertStats, setLoadingExpertStats] = useState(true);
+  const [errorExpertStats, setErrorExpertStats] = useState(null);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -184,20 +275,36 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    const fetchExpertStats = async () => {
+      try {
+        const response = await fetchWithAuth('http://localhost:3001/api/analytics/home-values/expert-stats');
+        setExpertStats(response);
+      } catch (err) {
+        setErrorExpertStats(err.message);
+      } finally {
+        setLoadingExpertStats(false);
+      }
+    };
+
+    fetchExpertStats();
+  }, []);
+
   const fetchAdminData = async () => {
     try {
+      setIsLoading(true);
       const [
         totalProps,
         propsByStatus,
         inquiriesPerProperty,
         propsPerAgent,
-        newPropsOverTime,
+        mostFavoritedProperties,
       ] = await Promise.all([
         fetchWithAuth('http://localhost:3001/api/analytics/properties/total'),
         fetchWithAuth('http://localhost:3001/api/analytics/properties/by-status'),
         fetchWithAuth('http://localhost:3001/api/analytics/inquiries/per-property'),
         fetchWithAuth('http://localhost:3001/api/analytics/properties/per-agent'),
-        fetchWithAuth('http://localhost:3001/api/analytics/properties/new-over-time'),
+        fetchWithAuth('http://localhost:3001/api/analytics/most-favorited'),
       ]);
 
       setTotalProperties(totalProps.totalProperties || 0);
@@ -206,45 +313,38 @@ function App() {
       setForRentCount(forRent ? forRent.count : 0);
       setForSaleCount(forSale ? forSale.count : 0);
 
-      const topPropertyIds = inquiriesPerProperty
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 2)
-        .map((item) => item.property_id);
-      const popularPropsDetails = await Promise.all(
-        topPropertyIds.map((id) => fetchWithAuth(`http://localhost:3001/api/properties/${id}`))
-      );
-      setPopularProperties(popularPropsDetails);
+      setPopularProperties(mostFavoritedProperties);
 
       const sortedAgents = propsPerAgent
         .sort((a, b) => b.propertycount - a.propertycount)
         .slice(0, 2);
+
+      // Calculate maximum properties to determine performance scaling
+      const maxProperties = Math.max(...sortedAgents.map(agent => agent.propertycount)) || 1;
+
       setTopAgents(
-        sortedAgents.map((agent) => ({
-          name: agent.agentname,
-          avatar: agent.avatar || 'default-avatar.png',
-          rating: agent.rating || 0,
-          bio: agent.bio || 'No bio available',
-        }))
+        sortedAgents.map((agent) => {
+          // Calculate performance rating (1-5 stars)
+          const performanceRating = Math.round((agent.propertycount / maxProperties) * 5);
+          return {
+            name: agent.agentname,
+            avatar: agent.avatar || 'default-avatar.png',
+            rating: performanceRating,
+            bio: agent.bio || 'No bio available',
+          };
+        })
       );
 
       setRecentMessages([]); // Placeholder
 
-      const labels = newPropsOverTime.map((item) => item.month);
-      const data = newPropsOverTime.map((item) => item.count);
-      setChartData({
-        labels,
-        datasets: [
-          {
-            label: 'New Properties',
-            data,
-            borderColor: '#0d6efd',
-            tension: 0.1,
-          },
-        ],
-      });
+      // Fetch properties around Algiers
+      const algiersProps = await fetchWithAuth('http://localhost:3001/api/properties?location=Algiers');
+      setAlgiersProperties(algiersProps);
     } catch (error) {
-      setError(error.message);
       console.error('Error fetching admin data:', error);
+      setError(`Error fetching data: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -258,22 +358,33 @@ function App() {
     }
   };
 
+  const handleListingClick = (id) => {
+    navigate(`/listing/${id}`);
+  };
+
   if (!isAuthenticated) {
-    return null; // Redirect handled in useEffect
+    return null;
   }
 
   if (isLoading) {
-    return <div className="container mt-4">Loading...</div>;
+    return (
+      <div className="container-fluid vh-100 d-flex align-items-center justify-content-center">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="container mt-4">
         <div className="alert alert-danger" role="alert">
-          {error}
-          <br />
+          <h4 className="alert-heading">Error</h4>
+          <p>{error}</p>
+          <hr />
           <button
-            className="btn btn-primary mt-2"
+            className="btn btn-primary"
             onClick={() => {
               localStorage.removeItem('authToken');
               setIsAuthenticated(false);
@@ -287,23 +398,38 @@ function App() {
   }
 
   if (userRole && userRole !== 'admin') {
-    window.location.href = 'http://localhost:5173/user-dashboard'; // Redirect non-admins
+    window.location.href = 'http://localhost:5173/user-dashboard';
     return null;
   }
 
   return (
-    <div className="container-fluid p-4 bg-white">
+    <div className="container-fluid p-4 bg-light min-vh-100">
       <div className="row g-4 mb-4">
         <div className="col-md-4">
-          <StatCard title="Total Properties" value={totalProperties} icon={Home} />
+          <StatCard
+            title="Total Properties"
+            value={totalProperties}
+            icon={Home}
+            color="bg-primary-subtle"
+          />
         </div>
         {userRole === 'admin' && (
           <>
             <div className="col-md-4">
-              <StatCard title="For Rent" value={forRentCount} icon={DollarSign} />
+              <StatCard
+                title="For Rent"
+                value={forRentCount}
+                icon={DollarSign}
+                color="bg-success-subtle"
+              />
             </div>
             <div className="col-md-4">
-              <StatCard title="For Sale" value={forSaleCount} icon={Building} />
+              <StatCard
+                title="For Sale"
+                value={forSaleCount}
+                icon={Building}
+                color="bg-warning-subtle"
+              />
             </div>
           </>
         )}
@@ -311,19 +437,23 @@ function App() {
 
       <div className="row g-4">
         <div className="col-lg-8">
-          <div className="card shadow-sm mb-4">
-            <div className="card-header bg-white">
-              <h5 className="mb-0">Popular Properties</h5>
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-header bg-white border-0">
+              <h5 className="mb-0 fw-bold">Popular Properties</h5>
             </div>
             <div className="card-body">
               <div className="row g-4">
                 {popularProperties.map((property, index) => (
                   <div key={index} className="col-md-6">
                     <PropertyCard
-                      name={property.name}
-                      location={property.location}
-                      agent={property.agent_name}
-                      image={property.image_url}
+                      property={{
+                        id: property.id,
+                        name: property.title,
+                        location: property.location,
+                        images_path: property.images_path,
+                        favorite_count: property.favorite_count
+                      }}
+                      onClick={handleListingClick}
                     />
                   </div>
                 ))}
@@ -331,27 +461,35 @@ function App() {
             </div>
           </div>
 
-          <Chart data={chartData} />
+          <AlgiersMap properties={algiersProperties} />
         </div>
 
         <div className="col-lg-4">
           {userRole === 'admin' && (
-            <div className="card shadow-sm mb-4">
-              <div className="card-header bg-white">
-                <h5 className="mb-0">Top Agents</h5>
+            <>
+              <ExpertStats
+                expertStats={expertStats}
+                loadingExpertStats={loadingExpertStats}
+                errorExpertStats={errorExpertStats}
+              />
+
+              <div className="card border-0 shadow-sm mb-4">
+                <div className="card-header bg-white border-0">
+                  <h5 className="mb-0 fw-bold">Top Agents</h5>
+                </div>
+                <div className="card-body">
+                  {topAgents.map((agent, index) => (
+                    <AgentCard
+                      key={index}
+                      name={agent.name}
+                      avatar={agent.avatar}
+                      rating={agent.rating}
+                      bio={agent.bio}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="card-body">
-                {topAgents.map((agent, index) => (
-                  <AgentCard
-                    key={index}
-                    name={agent.name}
-                    avatar={agent.avatar}
-                    rating={agent.rating}
-                    bio={agent.bio}
-                  />
-                ))}
-              </div>
-            </div>
+            </>
           )}
 
           <MessageList messages={recentMessages} />

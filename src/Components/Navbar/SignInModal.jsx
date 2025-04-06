@@ -50,7 +50,6 @@ function SignInModal({ show, onClose, onSignUpClick, onForgotPasswordClick, onSi
                 navigate("/admin");
               } else {
                 onSignInSuccess();
-                navigate("/");
               }
               onClose();
               setSuccessMessage("");

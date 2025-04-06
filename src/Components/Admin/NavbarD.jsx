@@ -61,14 +61,9 @@ function NavbarD() {
                 Users
               </Link>
             </li>
+            
             <li className="nav-item">
-              <Link className="nav-link" to="/admin/inquiries">
-                <FaInbox className="me-2" />
-                Inquiries
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/admin/settings">
+              <Link className="nav-link" to="/profile">
                 <FaCog className="me-2" />
                 Settings
               </Link>

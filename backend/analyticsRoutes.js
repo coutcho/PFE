@@ -253,4 +253,158 @@ router.get('/inquiries/per-agent', authenticateToken, isAdmin, async (req, res) 
   }
 });
 
+
+
+// Home Values Expert Stats
+router.get('/home-values/expert-stats', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+          u.id AS expert_id,
+          u.fullname AS expert_name,
+          COUNT(hv.id) AS request_count
+       FROM 
+          users u
+       LEFT JOIN 
+          home_values hv ON u.id = hv.expert_id
+       WHERE 
+          u.role = 'expert'
+       GROUP BY 
+          u.id, u.fullname
+       ORDER BY 
+          request_count DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching expert stats:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch expert stats', details: err.message });
+  }
+});
+
+
+
+// GET /api/properties/most-favorited
+router.get('/most-favorited', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.*, COUNT(f.property_id) AS favorite_count
+       FROM properties p
+       LEFT JOIN favorites f ON p.id = f.property_id
+       GROUP BY p.id
+       ORDER BY favorite_count DESC
+       LIMIT 2`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching most favorited properties:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch most favorited properties', details: err.message });
+  }
+});
+
+
+
+
+// GET /api/most-favorited-home
+router.get('/most-favorited-home', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.title, p.price, p.location, p.type, p.bedrooms, 
+              p.bathrooms, p.etage, p.square_footage, p.description, 
+              p.features, p.status, p.lat, p.long, 
+              p.images_path, p.equipe AS equipped, p.user_id AS agent_id, p.created_at,
+              COUNT(f.property_id) AS favorite_count
+       FROM properties p
+       LEFT JOIN favorites f ON p.id = f.property_id
+       GROUP BY p.id
+       HAVING COUNT(f.property_id) > 0
+       ORDER BY favorite_count DESC
+       LIMIT 5`
+    );
+
+    const formattedResults = result.rows.map(property => {
+      // Normalize images_path
+      let images = property.images_path;
+      if (typeof property.images_path === 'string') {
+        try {
+          images = JSON.parse(property.images_path);
+        } catch (e) {
+          console.error('Error parsing images_path:', e);
+          images = [];
+        }
+      }
+
+      return {
+        ...property,
+        images_path: images
+      };
+    });
+
+    res.json(formattedResults);
+  } catch (err) {
+    console.error('Error fetching most favorited properties for home:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch most favorited properties for home', details: err.message });
+  }
+});
+
+
+// GET /api/analytics/newest-listings
+router.get('/newest-listings', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT p.id, p.title, p.price, p.location, p.type, p.bedrooms, 
+              p.bathrooms, p.etage, p.square_footage, p.description, 
+              p.features, p.status, p.lat, p.long, 
+              p.images_path, p.equipe AS equipped, p.user_id AS agent_id, p.created_at
+       FROM properties p
+       ORDER BY p.created_at DESC
+       LIMIT 4`
+    );
+    
+    // Format the data to match what the frontend expects
+    const formattedResults = result.rows.map(property => {
+      // Ensure images_path is correctly parsed if it's a JSON string
+      let images = property.images_path;
+      if (typeof property.images_path === 'string') {
+        try {
+          images = JSON.parse(property.images_path);
+        } catch (e) {
+          console.log('Error parsing images_path:', e);
+          images = [];
+        }
+      }
+      
+      return {
+        ...property,
+        images_path: images
+      };
+    });
+    
+    res.json(formattedResults);
+  } catch (err) {
+    console.error('Error fetching newest listings:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch newest listings', details: err.message });
+  }
+});
+
+
+// GET /api/properties/in-algiers
+router.get('/properties/in-algiers', authenticateToken, isAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, location, price, lat, long
+       FROM properties
+       WHERE LOWER(location) LIKE '%algiers%'`
+    );
+    
+    // Filter out any properties that don't have valid coordinates
+    const validProperties = result.rows.filter(property => 
+      property.lat !== null && property.long !== null
+    );
+    
+    res.json(validProperties);
+  } catch (err) {
+    console.error('Error fetching Algiers properties:', err.stack);
+    res.status(500).json({ error: 'Failed to fetch Algiers properties', details: err.message });
+  }
+});
 export default router;

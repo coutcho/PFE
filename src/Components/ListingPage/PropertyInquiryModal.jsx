@@ -11,10 +11,9 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
   });
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
-  const [avecVTC, setAvecVTC] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-  
+
   // Create a ref for the modal content
   const modalContentRef = useRef(null);
 
@@ -93,7 +92,6 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
       message: finalMessage, // Use the modified message with tour details
       tour_date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : null,
       tour_time: selectedTime || null,
-      avec_vtc: avecVTC,
     };
 
     try {
@@ -113,11 +111,11 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
 
       setSuccess(true);
       setError(null);
-      
+
       if (modalContentRef.current) {
         modalContentRef.current.scrollTop = 0;
       }
-      
+
       setTimeout(() => {
         if (onInquirySubmitted) {
           onInquirySubmitted();
@@ -266,19 +264,6 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
           </div>
 
           <div className="modal-footer border-top">
-            <div className="form-check form-switch mb-2 w-100">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="avecVTCSwitch"
-                checked={avecVTC}
-                onChange={(e) => setAvecVTC(e.target.checked)}
-              />
-              <label className="form-check-label" htmlFor="avecVTCSwitch">
-                avec VTC
-              </label>
-            </div>
-
             <button
               className="btn btn-warning w-100"
               style={{ backgroundColor: '#fd7e14' }}
@@ -287,7 +272,7 @@ function PropertyInquiryModal({ show, onClose, property, onInquirySubmitted }) {
                 handleSubmit();
               }}
             >
-              {avecVTC ? 'Envoyer le message / Paiement' : 'Envoyer un message'}
+              Envoyer un message
             </button>
           </div>
         </div>

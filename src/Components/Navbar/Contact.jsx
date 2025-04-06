@@ -25,16 +25,16 @@ function Contact() {
       });
 
       if (response.ok) {
-        alert('Your message has been sent successfully!');
+        alert('Votre message a été envoyé avec succès !');
         setFullName('');
         setEmail('');
         setComments('');
       } else {
-        throw new Error('Failed to send message');
+        throw new Error('Échec de l\'envoi du message');
       }
     } catch (error) {
-    console.error('Error sending message:', error);
-    alert('Failed to send your message. Please try again later.');
+    console.error('Erreur lors de l\'envoi du message:', error);
+    alert('Échec de l\'envoi de votre message. Veuillez réessayer plus tard.');
     } finally {
       setIsSubmitting(false);
     }
@@ -46,7 +46,7 @@ function Contact() {
       <div className="container py-5">
         {/* Page Title */}
         <h1 className="mb-3 d-flex justify-content-center align-items-center">
-          Contact Darek.com
+          Contactez Darek.com
         </h1>
 
         {/* Horizontal rule */}
@@ -54,8 +54,8 @@ function Contact() {
 
         {/* Subtitle / Description */}
         <p className="text-secondary text-center">
-          Search real estate for sale & for rent listings. Research home property
-          values, neighborhoods, schools and more by Homes.com
+          Recherchez des annonces immobilières à vendre et à louer. Explorez les valeurs des propriétés, 
+          les quartiers, et plus encore sur Darek.com
         </p>
 
         {/* The Contact Form */}
@@ -68,13 +68,13 @@ function Contact() {
             {/* Full Name */}
             <div className="mb-3 w-100">
               <label htmlFor="fullName" className="form-label fw-bold">
-                Full Name <span className="text-danger">*</span>
+                Nom complet <span className="text-danger">*</span>
               </label>
               <input
                 type="text"
                 id="fullName"
                 className="form-control w-100"
-                placeholder="Enter your full name"
+                placeholder="Entrez votre nom complet"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -90,7 +90,7 @@ function Contact() {
                 type="email"
                 id="email"
                 className="form-control w-100"
-                placeholder="Enter your email address"
+                placeholder="Entrez votre adresse email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -100,20 +100,20 @@ function Contact() {
             {/* Comments */}
             <div className="mb-3 w-100">
               <label htmlFor="comments" className="form-label fw-bold">
-                Comments <span className="text-danger">*</span>
+                Commentaires <span className="text-danger">*</span>
               </label>
               <textarea
                 id="comments"
                 className="form-control w-100"
                 rows="5"
-                placeholder="Enter your comments"
+                placeholder="Entrez vos commentaires"
                 maxLength={maxChars}
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
                 required
               />
               <small className="text-muted">
-                {charCount} of {maxChars} max characters.
+                {charCount} sur {maxChars} caractères maximum.
               </small>
             </div>
 
@@ -125,7 +125,7 @@ function Contact() {
                 style={{ backgroundColor: '#FF6600', color: '#fff' }}
                 disabled={isSubmitting}
               >
-                {isSubmitting ? 'Sending...' : 'Submit'}
+                {isSubmitting ? 'Envoi en cours...' : 'Envoyer'}
               </button>
             </div>
           </form>

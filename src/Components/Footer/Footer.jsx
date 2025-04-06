@@ -1,155 +1,41 @@
-import React from "react";
-import { FaTwitter, FaInstagram, FaFacebook } from "react-icons/fa";
-export default function Footer() {
-    return (
-        <div className="container">
-      <footer className="ft py-5 mt-5">
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+function Footer() {
+  return (
+    <footer className="bg-dark text-light py-5 mt-5">
+      <div className="container">
         <div className="row">
-          {/* First Column */}
-          <div className="col-6 col-md-2 mb-3">
-            <h5>Section</h5>
-            <ul className="nav flex-column">
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Home
-                </a>
+          <div className="col-lg-8 mx-auto">
+            <ul className="nav justify-content-center border-bottom pb-3 mb-4">
+              <li className="nav-item">
+                <Link to="/" className="nav-link px-3 text-light hover-overlay">Home</Link>
               </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Features
-                </a>
+              <li className="nav-item">
+                <Link to="/listings" className="nav-link px-3 text-light">Annonces</Link>
               </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Pricing
-                </a>
+              <li className="nav-item">
+                <Link to="/home-value" className="nav-link px-3 text-light">Estimation immobilière</Link>
               </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  FAQs
-                </a>
+              <li className="nav-item">
+                <Link to="/contact" className="nav-link px-3 text-light">Contactez-nous</Link>
               </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  About
-                </a>
-              </li>
+              
             </ul>
-          </div>
-
-          {/* Second Column */}
-          <div className="col-6 col-md-2 mb-3">
-            <h5>Section</h5>
-            <ul className="nav flex-column">
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Home
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Features
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Pricing
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  FAQs
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  About
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Third Column */}
-          <div className="col-6 col-md-2 mb-3">
-            <h5>Section</h5>
-            <ul className="nav flex-column">
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Home
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Features
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  Pricing
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  FAQs
-                </a>
-              </li>
-              <li className="nav-item mb-2">
-                <a href="#" className="nav-link p-0 text-body-secondary">
-                  About
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* Fourth Column - Newsletter Subscription */}
-          <div className="col-md-5 offset-md-1 mb-3">
-            <form>
-              <h5>Subscribe to our newsletter</h5>
-              <p>Monthly digest of what's new and exciting from us.</p>
-              <div className="d-flex flex-column flex-sm-row w-100 gap-2">
-                <label htmlFor="newsletter1" className="visually-hidden">
-                  Email address
-                </label>
-                <input
-                  id="newsletter1"
-                  type="text"
-                  className="form-control"
-                  placeholder="Email address"
-                />
-                <button className="btn btn-primary" type="button">
-                  Subscribe
-                </button>
+            <div className="text-center">
+              <p className="mb-0">© 2025 Darek.com. Tous droits réservés.</p>
+              <div className="mt-3">
+                <a href="#" className="text-light me-3"><i className="bi bi-facebook"></i></a>
+                <a href="#" className="text-light me-3"><i className="bi bi-twitter"></i></a>
+                <a href="#" className="text-light me-3"><i className="bi bi-instagram"></i></a>
+                <a href="#" className="text-light"><i className="bi bi-linkedin"></i></a>
               </div>
-            </form>
+            </div>
           </div>
         </div>
-
-        {/* Bottom Section */}
-        <div className="d-flex flex-column flex-sm-row justify-content-between py-4 my-4 border-top">
-          <p>&copy; 2024 Company, Inc. All rights reserved.</p>
-          <ul className="list-unstyled d-flex">
-            {/* Twitter Icon */}
-            <li className="ms-3">
-              <a href="#" className="link-body-emphasis">
-                <FaTwitter size={24} />
-              </a>
-            </li>
-            {/* Instagram Icon */}
-            <li className="ms-3">
-              <a href="#" className="link-body-emphasis">
-                <FaInstagram size={24} />
-              </a>
-            </li>
-            {/* Facebook Icon */}
-            <li className="ms-3">
-              <a href="#" className="link-body-emphasis">
-                <FaFacebook size={24} />
-              </a>
-            </li>
-          </ul>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </footer>
   );
-  }
-  
+}
+
+export default Footer;
